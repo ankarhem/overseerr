@@ -52,7 +52,13 @@ components:
         email:
           type: string
           example: 'hey@itsme.com'
+          readOnly: true
+        username:
+          type: string
         plexToken:
+          type: string
+          readOnly: true
+        plexUsername:
           type: string
           readOnly: true
         userType:
@@ -77,13 +83,6 @@ components:
           type: number
           example: 5
           readOnly: true
-        requests:
-          type: array
-          readOnly: true
-          items:
-            $ref: '#/components/schemas/MediaRequest'
-        settings:
-          $ref: '#/components/schemas/UserSettings'
       required:
         - id
         - email
@@ -92,24 +91,21 @@ components:
     UserSettings:
       type: object
       properties:
-        enableNotifications:
-          type: boolean
-          default: true
-        discordId:
+        locale:
           type: string
-        telegramChatId:
+        region:
           type: string
-        telegramSendSilently:
-          type: boolean
-      required:
-        - enableNotifications
+        originalLanguage:
+          type: string
     MainSettings:
       type: object
       properties:
         apiKey:
           type: string
-          example: 'anapikey'
           readOnly: true
+        appLanguage:
+          type: string
+          example: en
         applicationTitle:
           type: string
           example: Overseerr
@@ -129,6 +125,9 @@ components:
           type: boolean
           example: false
         localLogin:
+          type: boolean
+          example: true
+        newPlexLogin:
           type: boolean
           example: true
         defaultPermissions:
@@ -166,11 +165,18 @@ components:
         port:
           type: number
           example: 32400
+        useSsl:
+          type: boolean
+          nullable: true
         libraries:
           type: array
           readOnly: true
           items:
             $ref: '#/components/schemas/PlexLibrary'
+        webAppUrl:
+          type: string
+          nullable: true
+          example: 'https://app.plex.tv/desktop'
       required:
         - name
         - machineId
@@ -296,6 +302,26 @@ components:
         - provides
         - owned
         - connection
+    TautulliSettings:
+      type: object
+      properties:
+        hostname:
+          type: string
+          nullable: true
+          example: 'tautulli.example.com'
+        port:
+          type: number
+          nullable: true
+          example: 8181
+        useSsl:
+          type: boolean
+          nullable: true
+        apiKey:
+          type: string
+          nullable: true
+        externalUrl:
+          type: string
+          nullable: true
     RadarrSettings:
       type: object
       properties:
@@ -395,7 +421,6 @@ components:
         activeLanguageProfileId:
           type: number
           example: 1
-          nullable: true
         activeAnimeProfileId:
           type: number
           nullable: true
@@ -405,6 +430,7 @@ components:
         activeAnimeProfileName:
           type: string
           example: 720p/1080p
+          nullable: true
         activeAnimeDirectory:
           type: string
           nullable: true
@@ -766,6 +792,10 @@ components:
           $ref: '#/components/schemas/ExternalIds'
         mediaInfo:
           $ref: '#/components/schemas/MediaInfo'
+        watchProviders:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchProviders'
     Episode:
       type: object
       properties:
@@ -903,6 +933,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ProductionCompany'
+        productionCountries:
+          type: array
+          items:
+            type: object
+            properties:
+              iso_3166_1:
+                type: string
+              name:
+                type: string
         spokenLanguages:
           type: array
           items:
@@ -940,6 +979,10 @@ components:
             $ref: '#/components/schemas/Keyword'
         mediaInfo:
           $ref: '#/components/schemas/MediaInfo'
+        watchProviders:
+          type: array
+          items:
+            $ref: '#/components/schemas/WatchProviders'
     MediaRequest:
       type: object
       properties:
@@ -950,7 +993,7 @@ components:
         status:
           type: number
           example: 0
-          description: Status of the request. 1 = PENDING APPROVAL, 2 = APPROVED, 3 = DECLINED, 4 = AVAILABLE
+          description: Status of the request. 1 = PENDING APPROVAL, 2 = APPROVED, 3 = DECLINED
           readOnly: true
         media:
           $ref: '#/components/schemas/MediaInfo'
@@ -1119,6 +1162,8 @@ components:
               type: string
             webhookUrl:
               type: string
+            enableMentions:
+              type: boolean
     SlackSettings:
       type: object
       properties:
@@ -1133,6 +1178,15 @@ components:
           properties:
             webhookUrl:
               type: string
+    WebPushSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: false
+        types:
+          type: number
+          example: 2
     WebhookSettings:
       type: object
       properties:
@@ -1146,6 +1200,8 @@ components:
           type: object
           properties:
             webhookUrl:
+              type: string
+            authHeader:
               type: string
             jsonPayload:
               type: string
@@ -1183,6 +1239,9 @@ components:
           properties:
             accessToken:
               type: string
+            channelTag:
+              type: string
+              nullable: true
     PushoverSettings:
       type: object
       properties:
@@ -1199,14 +1258,38 @@ components:
               type: string
             userToken:
               type: string
-            priority:
-              type: number
-    NotificationSettings:
+    GotifySettings:
       type: object
       properties:
         enabled:
           type: boolean
-          example: true
+          example: false
+        types:
+          type: number
+          example: 2
+        options:
+          type: object
+          properties:
+            url:
+              type: string
+            token:
+              type: string
+    LunaSeaSettings:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+          example: false
+        types:
+          type: number
+          example: 2
+        options:
+          type: object
+          properties:
+            webhookUrl:
+              type: string
+            profileName:
+              type: string
     NotificationEmailSettings:
       type: object
       properties:
@@ -1234,6 +1317,12 @@ components:
             secure:
               type: boolean
               example: false
+            ignoreTls:
+              type: boolean
+              example: false
+            requireTls:
+              type: boolean
+              example: false
             authUser:
               type: string
               nullable: true
@@ -1243,7 +1332,28 @@ components:
             allowSelfSigned:
               type: boolean
               example: false
-    PersonDetail:
+    Job:
+      type: object
+      properties:
+        id:
+          type: string
+          example: job-name
+        type:
+          type: string
+          enum: [process, command]
+        interval:
+          type: string
+          enum: [short, long, fixed]
+        name:
+          type: string
+          example: A Job Name
+        nextExecutionTime:
+          type: string
+          example: '2020-09-02T05:02:23.000Z'
+        running:
+          type: boolean
+          example: false
+    PersonDetails:
       type: object
       properties:
         id:
@@ -1559,10 +1669,33 @@ components:
     UserSettingsNotifications:
       type: object
       properties:
-        enableNotifications:
+        notificationTypes:
+          $ref: '#/components/schemas/NotificationAgentTypes'
+        emailEnabled:
           type: boolean
-          default: true
+        pgpKey:
+          type: string
+          nullable: true
+        discordEnabled:
+          type: boolean
+        discordEnabledTypes:
+          type: number
+          nullable: true
         discordId:
+          type: string
+          nullable: true
+        pushbulletAccessToken:
+          type: string
+          nullable: true
+        pushoverApplicationToken:
+          type: string
+          nullable: true
+        pushoverUserKey:
+          type: string
+          nullable: true
+        telegramEnabled:
+          type: boolean
+        telegramBotUsername:
           type: string
           nullable: true
         telegramChatId:
@@ -1571,8 +1704,82 @@ components:
         telegramSendSilently:
           type: boolean
           nullable: true
-      required:
-        - enableNotifications
+    NotificationAgentTypes:
+      type: object
+      properties:
+        discord:
+          type: number
+        email:
+          type: number
+        pushbullet:
+          type: number
+        pushover:
+          type: number
+        slack:
+          type: number
+        telegram:
+          type: number
+        webhook:
+          type: number
+        webpush:
+          type: number
+    WatchProviders:
+      type: array
+      items:
+        type: object
+        properties:
+          iso_3166_1:
+            type: string
+          link:
+            type: string
+          buy:
+            type: array
+            items:
+              $ref: '#/components/schemas/WatchProviderDetails'
+          flatrate:
+            items:
+              $ref: '#/components/schemas/WatchProviderDetails'
+    WatchProviderDetails:
+      type: object
+      properties:
+        displayPriority:
+          type: number
+        logoPath:
+          type: string
+        id:
+          type: number
+        name:
+          type: string
+    Issue:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        issueType:
+          type: number
+          example: 1
+        media:
+          $ref: '#/components/schemas/MediaInfo'
+        createdBy:
+          $ref: '#/components/schemas/User'
+        modifiedBy:
+          $ref: '#/components/schemas/User'
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueComment'
+    IssueComment:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1
+        user:
+          $ref: '#/components/schemas/User'
+        message:
+          type: string
+          example: A comment
   securitySchemes:
     cookieAuth:
       type: apiKey
@@ -1801,8 +2008,8 @@ paths:
                       $ref: '#/components/schemas/PlexLibrary'
   /settings/plex/devices/servers:
     get:
-      summary: Gets the user's available plex servers
-      description: Returns a list of available plex servers and their connectivity state
+      summary: Gets the user's available Plex servers
+      description: Returns a list of available Plex servers and their connectivity state
       tags:
         - settings
       responses:
@@ -1814,6 +2021,67 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/PlexDevice'
+  /settings/plex/users:
+    get:
+      summary: Get Plex users
+      description: |
+        Returns a list of Plex users in a JSON array.
+
+        Requires the `MANAGE_USERS` permission.
+      tags:
+        - settings
+        - users
+      responses:
+        '200':
+          description: Plex users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    title:
+                      type: string
+                    username:
+                      type: string
+                    email:
+                      type: string
+                    thumb:
+                      type: string
+  /settings/tautulli:
+    get:
+      summary: Get Tautulli settings
+      description: Retrieves current Tautulli settings.
+      tags:
+        - settings
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TautulliSettings'
+    post:
+      summary: Update Tautulli settings
+      description: Updates Tautulli settings with the provided values.
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TautulliSettings'
+      responses:
+        '200':
+          description: 'Values were successfully updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TautulliSettings'
   /settings/radarr:
     get:
       summary: Get Radarr settings
@@ -2121,23 +2389,7 @@ paths:
               schema:
                 type: array
                 items:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                      example: job-name
-                    name:
-                      type: string
-                      example: A Job Name
-                    type:
-                      type: string
-                      enum: [process, command]
-                    nextExecutionTime:
-                      type: string
-                      example: '2020-09-02T05:02:23.000Z'
-                    running:
-                      type: boolean
-                      example: false
+                  $ref: '#/components/schemas/Job'
   /settings/jobs/{jobId}/run:
     post:
       summary: Invoke a specific job
@@ -2156,23 +2408,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    example: job-name
-                  type:
-                    type: string
-                    enum: [process, command]
-                  name:
-                    type: string
-                    example: A Job Name
-                  nextExecutionTime:
-                    type: string
-                    example: '2020-09-02T05:02:23.000Z'
-                  running:
-                    type: boolean
-                    example: false
+                $ref: '#/components/schemas/Job'
   /settings/jobs/{jobId}/cancel:
     post:
       summary: Cancel a specific job
@@ -2191,23 +2427,36 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  id:
-                    type: string
-                    example: job-name
-                  type:
-                    type: string
-                    enum: [process, command]
-                  name:
-                    type: string
-                    example: A Job Name
-                  nextExecutionTime:
-                    type: string
-                    example: '2020-09-02T05:02:23.000Z'
-                  running:
-                    type: boolean
-                    example: false
+                $ref: '#/components/schemas/Job'
+  /settings/jobs/{jobId}/schedule:
+    post:
+      summary: Modify job schedule
+      description: Re-registers the job with the schedule specified. Will return the job in JSON format.
+      tags:
+        - settings
+      parameters:
+        - in: path
+          name: jobId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                schedule:
+                  type: string
+                  example: '0 */5 * * * *'
+      responses:
+        '200':
+          description: Rescheduled job
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Job'
   /settings/cache:
     get:
       summary: Get a list of active caches
@@ -2305,38 +2554,7 @@ paths:
                       example: Server ready on port 5055
                     timestamp:
                       type: string
-                      example: 2020-12-15T16:20:00.069Z
-  /settings/notifications:
-    get:
-      summary: Return notification settings
-      description: Returns current notification settings in a JSON object.
-      tags:
-        - settings
-      responses:
-        '200':
-          description: Returned settings
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationSettings'
-    post:
-      summary: Update notification settings
-      description: Updates notification settings with the provided values.
-      tags:
-        - settings
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/NotificationSettings'
-      responses:
-        '200':
-          description: 'Values were sucessfully updated'
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/NotificationSettings'
+                      example: '2020-12-15T16:20:00.069Z'
   /settings/notifications/email:
     get:
       summary: Get email notification settings
@@ -2429,22 +2647,22 @@ paths:
       responses:
         '204':
           description: Test notification attempted
-  /settings/notifications/telegram:
+  /settings/notifications/lunasea:
     get:
-      summary: Get Telegram notification settings
-      description: Returns current Telegram notification settings in a JSON object.
+      summary: Get LunaSea notification settings
+      description: Returns current LunaSea notification settings in a JSON object.
       tags:
         - settings
       responses:
         '200':
-          description: Returned Telegram settings
+          description: Returned LunaSea settings
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TelegramSettings'
+                $ref: '#/components/schemas/LunaSeaSettings'
     post:
-      summary: Update Telegram notification settings
-      description: Update Telegram notification settings with the provided values.
+      summary: Update LunaSea notification settings
+      description: Updates LunaSea notification settings with the provided values.
       tags:
         - settings
       requestBody:
@@ -2452,18 +2670,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TelegramSettings'
+              $ref: '#/components/schemas/LunaSeaSettings'
       responses:
         '200':
           description: 'Values were sucessfully updated'
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/TelegramSettings'
-  /settings/notifications/telegram/test:
+                $ref: '#/components/schemas/LunaSeaSettings'
+  /settings/notifications/lunasea/test:
     post:
-      summary: Test Telegram settings
-      description: Sends a test notification to the Telegram agent.
+      summary: Test LunaSea settings
+      description: Sends a test notification to the LunaSea agent.
       tags:
         - settings
       requestBody:
@@ -2471,7 +2689,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/TelegramSettings'
+              $ref: '#/components/schemas/LunaSeaSettings'
       responses:
         '204':
           description: Test notification attempted
@@ -2567,6 +2785,52 @@ paths:
       responses:
         '204':
           description: Test notification attempted
+  /settings/notifications/gotify:
+    get:
+      summary: Get Gotify notification settings
+      description: Returns current Gotify notification settings in a JSON object.
+      tags:
+        - settings
+      responses:
+        '200':
+          description: Returned Gotify settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GotifySettings'
+    post:
+      summary: Update Gotify notification settings
+      description: Update Gotify notification settings with the provided values.
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GotifySettings'
+      responses:
+        '200':
+          description: 'Values were sucessfully updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GotifySettings'
+  /settings/notifications/gotify/test:
+    post:
+      summary: Test Gotify settings
+      description: Sends a test notification to the Gotify agent.
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GotifySettings'
+      responses:
+        '204':
+          description: Test notification attempted
   /settings/notifications/slack:
     get:
       summary: Get Slack notification settings
@@ -2610,6 +2874,98 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/SlackSettings'
+      responses:
+        '204':
+          description: Test notification attempted
+  /settings/notifications/telegram:
+    get:
+      summary: Get Telegram notification settings
+      description: Returns current Telegram notification settings in a JSON object.
+      tags:
+        - settings
+      responses:
+        '200':
+          description: Returned Telegram settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramSettings'
+    post:
+      summary: Update Telegram notification settings
+      description: Update Telegram notification settings with the provided values.
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramSettings'
+      responses:
+        '200':
+          description: 'Values were sucessfully updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TelegramSettings'
+  /settings/notifications/telegram/test:
+    post:
+      summary: Test Telegram settings
+      description: Sends a test notification to the Telegram agent.
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TelegramSettings'
+      responses:
+        '204':
+          description: Test notification attempted
+  /settings/notifications/webpush:
+    get:
+      summary: Get Web Push notification settings
+      description: Returns current Web Push notification settings in a JSON object.
+      tags:
+        - settings
+      responses:
+        '200':
+          description: Returned web push settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebPushSettings'
+    post:
+      summary: Update Web Push notification settings
+      description: Updates Web Push notification settings with the provided values.
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebPushSettings'
+      responses:
+        '200':
+          description: 'Values were sucessfully updated'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebPushSettings'
+  /settings/notifications/webpush/test:
+    post:
+      summary: Test Web Push settings
+      description: Sends a test notification to the Web Push agent.
+      tags:
+        - settings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebPushSettings'
       responses:
         '204':
           description: Test notification attempted
@@ -2806,6 +3162,13 @@ paths:
       security: []
       tags:
         - users
+      parameters:
+        - in: path
+          name: guid
+          required: true
+          schema:
+            type: number
+            example: 1
       responses:
         '200':
           description: OK
@@ -2878,7 +3241,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/User'
+              type: object
+              properties:
+                email:
+                  type: string
+                  example: 'hey@itsme.com'
+                username:
+                  type: string
+                permissions:
+                  type: number
       responses:
         '201':
           description: The created user
@@ -2889,7 +3260,7 @@ paths:
     put:
       summary: Update batch of users
       description: |
-        Update users with given IDs with provided values in request `body.settings`. You cannot update users' plex tokens through this request.
+        Update users with given IDs with provided values in request `body.settings`. You cannot update users' Plex tokens through this request.
 
         Requires the `MANAGE_USERS` permission.
       tags:
@@ -2916,16 +3287,26 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/User'
-
   /user/import-from-plex:
     post:
       summary: Import all users from Plex
       description: |
-        Requests users from the Plex Server and creates a new user for each of them
+        Fetches and imports users from the Plex server. If a list of Plex IDs is provided in the request body, only the specified users will be imported. Otherwise, all users will be imported.
 
         Requires the `MANAGE_USERS` permission.
       tags:
         - users
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                plexIds:
+                  type: array
+                  items:
+                    type: string
       responses:
         '201':
           description: A list of the newly created users
@@ -2935,11 +3316,37 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/User'
+  /user/registerPushSubscription:
+    post:
+      summary: Register a web push /user/registerPushSubscription
+      description: Registers a web push subscription for the logged-in user
+      tags:
+        - users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                endpoint:
+                  type: string
+                auth:
+                  type: string
+                p256dh:
+                  type: string
+              required:
+                - endpoint
+                - auth
+                - p256dh
+      responses:
+        '204':
+          description: Successfully registered push subscription
   /user/{userId}:
     get:
       summary: Get user by ID
       description: |
-        Retrieves user details in a JSON object.. Requires the `MANAGE_USERS` permission.
+        Retrieves user details in a JSON object. Requires the `MANAGE_USERS` permission.
       tags:
         - users
       parameters:
@@ -3301,6 +3708,35 @@ paths:
                   permissions:
                     type: number
                     example: 2
+  /user/{userId}/watch_data:
+    get:
+      summary: Get watch data
+      description: |
+        Returns play count, play duration, and recently watched media.
+
+        Requires the `ADMIN` permission to fetch results for other users.
+      tags:
+        - users
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: number
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  recentlyWatched:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/MediaInfo'
+                  playCount:
+                    type: number
   /search:
     get:
       summary: Search for movies, TV shows, or people
@@ -4052,6 +4488,9 @@ paths:
                   type: string
                 languageProfileId:
                   type: number
+                userId:
+                  type: number
+                  nullable: true
               required:
                 - mediaType
                 - mediaId
@@ -4077,21 +4516,22 @@ paths:
               schema:
                 type: object
                 properties:
+                  total:
+                    type: number
+                  movie:
+                    type: number
+                  tv:
+                    type: number
                   pending:
                     type: number
-                    example: 0
                   approved:
                     type: number
-                    example: 10
+                  declined:
+                    type: number
                   processing:
                     type: number
-                    example: 4
                   available:
                     type: number
-                    example: 6
-                required:
-                  - pending
-                  - approved
   /request/{requestId}:
     get:
       summary: Get MediaRequest
@@ -4409,7 +4849,7 @@ paths:
           name: language
           schema:
             type: string
-            example: en-US
+            example: en
       responses:
         '200':
           description: TV details
@@ -4567,8 +5007,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PersonDetail'
-
+                $ref: '#/components/schemas/PersonDetails'
   /person/{personId}/combined_credits:
     get:
       summary: Get combined credits
@@ -4705,6 +5144,57 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/MediaInfo'
+  /media/{mediaId}/watch_data:
+    get:
+      summary: Get watch data
+      description: |
+        Returns play count, play duration, and users who have watched the media.
+
+        Requires the `ADMIN` permission.
+      tags:
+        - media
+      parameters:
+        - in: path
+          name: mediaId
+          description: Media ID
+          required: true
+          example: '1'
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      playCount7Days:
+                        type: number
+                      playCount30Days:
+                        type: number
+                      playCount:
+                        type: number
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
+                  data4k:
+                    type: object
+                    properties:
+                      playCount7Days:
+                        type: number
+                      playCount30Days:
+                        type: number
+                      playCount:
+                        type: number
+                      users:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/User'
   /collection/{collectionId}:
     get:
       summary: Get collection details
@@ -4975,7 +5465,267 @@ paths:
                     name:
                       type: string
                       example: Drama
+  /backdrops:
+    get:
+      summary: Get backdrops of trending items
+      description: Returns a list of backdrop image paths in a JSON array.
+      security: []
+      tags:
+        - tmdb
+      responses:
+        '200':
+          description: Results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+  /issue:
+    get:
+      summary: Get all issues
+      description: |
+        Returns a list of issues in JSON format.
+      tags:
+        - issue
+      parameters:
+        - in: query
+          name: take
+          schema:
+            type: number
+            nullable: true
+            example: 20
+        - in: query
+          name: skip
+          schema:
+            type: number
+            nullable: true
+            example: 0
+        - in: query
+          name: sort
+          schema:
+            type: string
+            enum: [added, modified]
+            default: added
+        - in: query
+          name: filter
+          schema:
+            type: string
+            enum: [all, open, resolved]
+            default: open
+        - in: query
+          name: requestedBy
+          schema:
+            type: number
+            nullable: true
+            example: 1
+      responses:
+        '200':
+          description: Issues returned
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  pageInfo:
+                    $ref: '#/components/schemas/PageInfo'
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Issue'
+    post:
+      summary: Create new issue
+      description: |
+        Creates a new issue
+      tags:
+        - issue
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issueType:
+                  type: number
+                message:
+                  type: string
+                mediaId:
+                  type: number
+      responses:
+        '201':
+          description: Succesfully created the issue
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+  /issue/{issueId}:
+    get:
+      summary: Get issue
+      description: |
+        Returns a single issue in JSON format.
+      tags:
+        - issue
+      parameters:
+        - in: path
+          name: issueId
+          required: true
+          schema:
+            type: number
+            example: 1
+      responses:
+        '200':
+          description: Issues returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+    delete:
+      summary: Delete issue
+      description: Removes an issue. If the user has the `MANAGE_ISSUES` permission, any issue can be removed. Otherwise, only a users own issues can be removed.
+      tags:
+        - issue
+      parameters:
+        - in: path
+          name: issueId
+          description: Issue ID
+          required: true
+          example: '1'
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Succesfully removed issue
+  /issue/{issueId}/comment:
+    post:
+      summary: Create a comment
+      description: |
+        Creates a comment and returns associated issue in JSON format.
+      tags:
+        - issue
+      parameters:
+        - in: path
+          name: issueId
+          required: true
+          schema:
+            type: number
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+              required:
+                - message
+      responses:
+        '200':
+          description: Issue returned with new comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
+  /issueComment/{commentId}:
+    get:
+      summary: Get issue comment
+      description: |
+        Returns a single issue comment in JSON format.
+      tags:
+        - issue
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+            example: 1
+      responses:
+        '200':
+          description: Comment returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueComment'
+    put:
+      summary: Update issue comment
+      description: |
+        Updates and returns a single issue comment in JSON format.
+      tags:
+        - issue
+      parameters:
+        - in: path
+          name: commentId
+          required: true
+          schema:
+            type: string
+            example: 1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                message:
+                  type: string
+      responses:
+        '200':
+          description: Comment updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IssueComment'
+    delete:
+      summary: Delete issue comment
+      description: |
+        Deletes an issue comment. Only users with `MANAGE_ISSUES` or the user who created the comment can perform this action.
+      tags:
+        - issue
+      parameters:
+        - in: path
+          name: commentId
+          description: Issue Comment ID
+          required: true
+          example: '1'
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Succesfully removed issue comment
+  /issue/{issueId}/{status}:
+    post:
+      summary: Update an issue's status
+      description: |
+        Updates an issue's status to approved or declined. Also returns the issue in a JSON object.
 
+        Requires the `MANAGE_ISSUES` permission or `ADMIN`.
+      tags:
+        - issue
+      parameters:
+        - in: path
+          name: issueId
+          description: Issue ID
+          required: true
+          schema:
+            type: string
+            example: '1'
+        - in: path
+          name: status
+          description: New status
+          required: true
+          schema:
+            type: string
+            enum: [open, resolved]
+      responses:
+        '200':
+          description: Issue status changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Issue'
 security:
   - cookieAuth: []
   - apiKey: []
