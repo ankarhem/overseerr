@@ -1,7 +1,7 @@
 import useClickOutside from '@app/hooks/useClickOutside';
 import { withProperties } from '@app/utils/typeHelpers';
 import { Transition } from '@headlessui/react';
-import { ChevronDownIcon } from '@heroicons/react/solid';
+import { ChevronDownIcon } from '@heroicons/react/24/solid';
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes } from 'react';
 import { Fragment, useRef, useState } from 'react';
 
@@ -101,12 +101,12 @@ const ButtonWithDropdown = ({
           <Transition
             as={Fragment}
             show={isOpen}
-            enter="transition ease-out duration-100 opacity-0"
-            enterFrom="transform opacity-0 scale-95"
-            enterTo="transform opacity-100 scale-100"
-            leave="transition ease-in duration-75 opacity-100"
-            leaveFrom="transform opacity-100 scale-100"
-            leaveTo="transform opacity-0 scale-95"
+            enter="transition ease-out duration-100"
+            enterFrom="opacity-0 scale-95"
+            enterTo="opacity-100 scale-100"
+            leave="transition ease-in duration-75"
+            leaveFrom="opacity-100 scale-100"
+            leaveTo="opacity-0 scale-95"
           >
             <div className="absolute right-0 z-40 mt-2 -mr-1 w-56 origin-top-right rounded-md shadow-lg">
               <div

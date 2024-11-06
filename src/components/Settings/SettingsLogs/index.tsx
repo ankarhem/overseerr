@@ -13,13 +13,13 @@ import { Transition } from '@headlessui/react';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  ClipboardCopyIcon,
-  DocumentSearchIcon,
-  FilterIcon,
+  ClipboardDocumentIcon,
+  DocumentMagnifyingGlassIcon,
+  FunnelIcon,
+  MagnifyingGlassIcon,
   PauseIcon,
   PlayIcon,
-  SearchIcon,
-} from '@heroicons/react/solid';
+} from '@heroicons/react/24/solid';
 import type {
   LogMessage,
   LogsResultsResponse,
@@ -143,10 +143,10 @@ const SettingsLogs = () => {
       />
       <Transition
         as={Fragment}
-        enter="opacity-0 transition duration-300"
+        enter="transition-opacity duration-300"
         enterFrom="opacity-0"
         enterTo="opacity-100"
-        leave="opacity-100 transition duration-300"
+        leave="transition-opacity duration-300"
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
         appear
@@ -252,7 +252,7 @@ const SettingsLogs = () => {
         <div className="mt-2 flex flex-grow flex-col sm:flex-grow-0 sm:flex-row sm:justify-end">
           <div className="mb-2 flex flex-grow sm:mb-0 sm:mr-2 md:flex-grow-0">
             <span className="inline-flex cursor-default items-center rounded-l-md border border-r-0 border-gray-500 bg-gray-800 px-3 text-sm text-gray-100">
-              <SearchIcon className="h-6 w-6" />
+              <MagnifyingGlassIcon className="h-6 w-6" />
             </span>
             <input
               type="text"
@@ -276,7 +276,7 @@ const SettingsLogs = () => {
             </Button>
             <div className="flex flex-grow">
               <span className="inline-flex cursor-default items-center rounded-l-md border border-r-0 border-gray-500 bg-gray-800 px-3 text-sm text-gray-100">
-                <FilterIcon className="h-6 w-6" />
+                <FunnelIcon className="h-6 w-6" />
               </span>
               <select
                 id="filter"
@@ -367,7 +367,7 @@ const SettingsLogs = () => {
                             }
                             className="m-1"
                           >
-                            <DocumentSearchIcon className="icon-md" />
+                            <DocumentMagnifyingGlassIcon className="icon-md" />
                           </Button>
                         </Tooltip>
                       )}
@@ -380,7 +380,7 @@ const SettingsLogs = () => {
                           onClick={() => copyLogString(row)}
                           className="m-1"
                         >
-                          <ClipboardCopyIcon className="icon-md" />
+                          <ClipboardDocumentIcon className="icon-md" />
                         </Button>
                       </Tooltip>
                     </Table.TD>

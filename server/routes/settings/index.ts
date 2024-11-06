@@ -14,12 +14,14 @@ import type {
 import { scheduledJobs } from '@server/job/schedule';
 import type { AvailableCacheIds } from '@server/lib/cache';
 import cacheManager from '@server/lib/cache';
+import ImageProxy from '@server/lib/imageproxy';
 import { Permission } from '@server/lib/permissions';
 import { plexFullScanner } from '@server/lib/scanners/plex';
-import type { MainSettings } from '@server/lib/settings';
+import type { JobId, MainSettings } from '@server/lib/settings';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
+import discoverSettingRoutes from '@server/routes/settings/discover';
 import { appDataPath } from '@server/utils/appDataVolume';
 import { getAppVersion } from '@server/utils/appVersion';
 import { Router } from 'express';
@@ -39,6 +41,7 @@ const settingsRoutes = Router();
 settingsRoutes.use('/notifications', notificationRoutes);
 settingsRoutes.use('/radarr', radarrRoutes);
 settingsRoutes.use('/sonarr', sonarrRoutes);
+settingsRoutes.use('/discover', discoverSettingRoutes);
 
 const filteredMainSettings = (
   user: User,
@@ -251,25 +254,27 @@ settingsRoutes.post('/tautulli', async (req, res, next) => {
 
   Object.assign(settings.tautulli, req.body);
 
-  try {
-    const tautulliClient = new TautulliAPI(settings.tautulli);
+  if (settings.tautulli.hostname) {
+    try {
+      const tautulliClient = new TautulliAPI(settings.tautulli);
 
-    const result = await tautulliClient.getInfo();
+      const result = await tautulliClient.getInfo();
 
-    if (!semver.gte(semver.coerce(result?.tautulli_version) ?? '', '2.9.0')) {
-      throw new Error('Tautulli version not supported');
+      if (!semver.gte(semver.coerce(result?.tautulli_version) ?? '', '2.9.0')) {
+        throw new Error('Tautulli version not supported');
+      }
+
+      settings.save();
+    } catch (e) {
+      logger.error('Something went wrong testing Tautulli connection', {
+        label: 'API',
+        errorMessage: e.message,
+      });
+      return next({
+        status: 500,
+        message: 'Unable to connect to Tautulli.',
+      });
     }
-
-    settings.save();
-  } catch (e) {
-    logger.error('Something went wrong testing Tautulli connection', {
-      label: 'API',
-      errorMessage: e.message,
-    });
-    return next({
-      status: 500,
-      message: 'Unable to connect to Tautulli.',
-    });
   }
 
   return res.status(200).json(settings.tautulli);
@@ -491,7 +496,7 @@ settingsRoutes.post<{ jobId: string }>('/jobs/:jobId/run', (req, res, next) => {
   });
 });
 
-settingsRoutes.post<{ jobId: string }>(
+settingsRoutes.post<{ jobId: JobId }>(
   '/jobs/:jobId/cancel',
   (req, res, next) => {
     const scheduledJob = scheduledJobs.find(
@@ -518,7 +523,7 @@ settingsRoutes.post<{ jobId: string }>(
   }
 );
 
-settingsRoutes.post<{ jobId: string }>(
+settingsRoutes.post<{ jobId: JobId }>(
   '/jobs/:jobId/schedule',
   (req, res, next) => {
     const scheduledJob = scheduledJobs.find(
@@ -553,16 +558,23 @@ settingsRoutes.post<{ jobId: string }>(
   }
 );
 
-settingsRoutes.get('/cache', (req, res) => {
-  const caches = cacheManager.getAllCaches();
+settingsRoutes.get('/cache', async (_req, res) => {
+  const cacheManagerCaches = cacheManager.getAllCaches();
 
-  return res.status(200).json(
-    Object.values(caches).map((cache) => ({
-      id: cache.id,
-      name: cache.name,
-      stats: cache.getStats(),
-    }))
-  );
+  const apiCaches = Object.values(cacheManagerCaches).map((cache) => ({
+    id: cache.id,
+    name: cache.name,
+    stats: cache.getStats(),
+  }));
+
+  const tmdbImageCache = await ImageProxy.getImageStats('tmdb');
+
+  return res.status(200).json({
+    apiCaches,
+    imageCache: {
+      tmdb: tmdbImageCache,
+    },
+  });
 });
 
 settingsRoutes.post<{ cacheId: AvailableCacheIds }>(

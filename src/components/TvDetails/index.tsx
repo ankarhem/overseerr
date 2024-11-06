@@ -11,6 +11,7 @@ import PageTitle from '@app/components/Common/PageTitle';
 import type { PlayButtonLink } from '@app/components/Common/PlayButton';
 import PlayButton from '@app/components/Common/PlayButton';
 import StatusBadgeMini from '@app/components/Common/StatusBadgeMini';
+import Tag from '@app/components/Common/Tag';
 import Tooltip from '@app/components/Common/Tooltip';
 import ExternalLinkBlock from '@app/components/ExternalLinkBlock';
 import IssueModal from '@app/components/IssueModal';
@@ -22,22 +23,24 @@ import RequestModal from '@app/components/RequestModal';
 import Slider from '@app/components/Slider';
 import StatusBadge from '@app/components/StatusBadge';
 import Season from '@app/components/TvDetails/Season';
+import useDeepLinks from '@app/hooks/useDeepLinks';
 import useLocale from '@app/hooks/useLocale';
 import useSettings from '@app/hooks/useSettings';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import Error from '@app/pages/_error';
 import { sortCrewPriority } from '@app/utils/creditHelpers';
+import { refreshIntervalHelper } from '@app/utils/refreshIntervalHelper';
 import { Disclosure, Transition } from '@headlessui/react';
 import {
-  ArrowCircleRightIcon,
+  ArrowRightCircleIcon,
   CogIcon,
-  ExclamationIcon,
+  ExclamationTriangleIcon,
   FilmIcon,
   PlayIcon,
-} from '@heroicons/react/outline';
-import { ChevronUpIcon } from '@heroicons/react/solid';
-import type { RTRating } from '@server/api/rottentomatoes';
+} from '@heroicons/react/24/outline';
+import { ChevronDownIcon } from '@heroicons/react/24/solid';
+import type { RTRating } from '@server/api/rating/rottentomatoes';
 import { ANIME_KEYWORD_ID } from '@server/api/themoviedb/constants';
 import { IssueStatus } from '@server/constants/issue';
 import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
@@ -107,6 +110,13 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     mutate: revalidate,
   } = useSWR<TvDetailsType>(`/api/v1/tv/${router.query.tvId}`, {
     fallbackData: tv,
+    refreshInterval: refreshIntervalHelper(
+      {
+        downloadStatus: tv?.mediaInfo?.downloadStatus,
+        downloadStatus4k: tv?.mediaInfo?.downloadStatus4k,
+      },
+      15000
+    ),
   });
 
   const { data: ratingData } = useSWR<RTRating>(
@@ -122,29 +132,12 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     setShowManager(router.query.manage == '1' ? true : false);
   }, [router.query.manage]);
 
-  const [plexUrl, setPlexUrl] = useState(data?.mediaInfo?.plexUrl);
-  const [plexUrl4k, setPlexUrl4k] = useState(data?.mediaInfo?.plexUrl4k);
-
-  useEffect(() => {
-    if (data) {
-      if (
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.userAgent === 'MacIntel' && navigator.maxTouchPoints > 1)
-      ) {
-        setPlexUrl(data.mediaInfo?.iOSPlexUrl);
-        setPlexUrl4k(data.mediaInfo?.iOSPlexUrl4k);
-      } else {
-        setPlexUrl(data.mediaInfo?.plexUrl);
-        setPlexUrl4k(data.mediaInfo?.plexUrl4k);
-      }
-    }
-  }, [
-    data,
-    data?.mediaInfo?.iOSPlexUrl,
-    data?.mediaInfo?.iOSPlexUrl4k,
-    data?.mediaInfo?.plexUrl,
-    data?.mediaInfo?.plexUrl4k,
-  ]);
+  const { plexUrl, plexUrl4k } = useDeepLinks({
+    plexUrl: data?.mediaInfo?.plexUrl,
+    plexUrl4k: data?.mediaInfo?.plexUrl4k,
+    iOSPlexUrl: data?.mediaInfo?.iOSPlexUrl,
+    iOSPlexUrl4k: data?.mediaInfo?.iOSPlexUrl4k,
+  });
 
   if (!data && !error) {
     return <LoadingSpinner />;
@@ -208,7 +201,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
   }
 
   const seasonCount = data.seasons.filter(
-    (season) => season.seasonNumber !== 0
+    (season) => season.seasonNumber !== 0 && season.episodeCount !== 0
   ).length;
 
   if (seasonCount) {
@@ -221,7 +214,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     seriesAttributes.push(
       data.genres
         .map((g) => (
-          <Link href={`/discover/tv/genre/${g.id}`} key={`genre-${g.id}`}>
+          <Link href={`/discover/tv?genre=${g.id}`} key={`genre-${g.id}`}>
             <a className="hover:underline">{g.name}</a>
           </Link>
         ))
@@ -236,25 +229,37 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
     );
   }
 
-  const isComplete =
-    seasonCount <=
-    (
-      data.mediaInfo?.seasons.filter(
-        (season) =>
-          season.status === MediaStatus.AVAILABLE ||
-          season.status === MediaStatus.PARTIALLY_AVAILABLE
-      ) ?? []
-    ).length;
+  const getAllRequestedSeasons = (is4k: boolean): number[] => {
+    const requestedSeasons = (data?.mediaInfo?.requests ?? [])
+      .filter(
+        (request) =>
+          request.is4k === is4k &&
+          request.status !== MediaRequestStatus.DECLINED
+      )
+      .reduce((requestedSeasons, request) => {
+        return [
+          ...requestedSeasons,
+          ...request.seasons.map((sr) => sr.seasonNumber),
+        ];
+      }, [] as number[]);
 
-  const is4kComplete =
-    seasonCount <=
-    (
-      data.mediaInfo?.seasons.filter(
+    const availableSeasons = (data?.mediaInfo?.seasons ?? [])
+      .filter(
         (season) =>
-          season.status4k === MediaStatus.AVAILABLE ||
-          season.status4k === MediaStatus.PARTIALLY_AVAILABLE
-      ) ?? []
-    ).length;
+          (season[is4k ? 'status4k' : 'status'] === MediaStatus.AVAILABLE ||
+            season[is4k ? 'status4k' : 'status'] ===
+              MediaStatus.PARTIALLY_AVAILABLE ||
+            season[is4k ? 'status4k' : 'status'] === MediaStatus.PROCESSING) &&
+          !requestedSeasons.includes(season.seasonNumber)
+      )
+      .map((season) => season.seasonNumber);
+
+    return [...requestedSeasons, ...availableSeasons];
+  };
+
+  const isComplete = seasonCount <= getAllRequestedSeasons(false).length;
+
+  const is4kComplete = seasonCount <= getAllRequestedSeasons(true).length;
 
   const streamingProviders =
     data?.watchProviders?.find((provider) => provider.iso_3166_1 === region)
@@ -334,10 +339,12 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
           <div className="media-status">
             <StatusBadge
               status={data.mediaInfo?.status}
+              downloadItem={data.mediaInfo?.downloadStatus}
+              title={data.name}
               inProgress={(data.mediaInfo?.downloadStatus ?? []).length > 0}
               tmdbId={data.mediaInfo?.tmdbId}
               mediaType="tv"
-              plexUrl={data.mediaInfo?.plexUrl}
+              plexUrl={plexUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
             {settings.currentSettings.series4kEnabled &&
@@ -353,13 +360,15 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
               ) && (
                 <StatusBadge
                   status={data.mediaInfo?.status4k}
+                  downloadItem={data.mediaInfo?.downloadStatus4k}
+                  title={data.name}
                   is4k
                   inProgress={
                     (data.mediaInfo?.downloadStatus4k ?? []).length > 0
                   }
                   tmdbId={data.mediaInfo?.tmdbId}
                   mediaType="tv"
-                  plexUrl={data.mediaInfo?.plexUrl4k}
+                  plexUrl={plexUrl4k}
                   serviceUrl={data.mediaInfo?.serviceUrl4k}
                 />
               )}
@@ -416,7 +425,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                   onClick={() => setShowIssueModal(true)}
                   className="ml-2 first:ml-0"
                 >
-                  <ExclamationIcon />
+                  <ExclamationTriangleIcon />
                 </Button>
               </Tooltip>
             )}
@@ -488,11 +497,25 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                 <Link href={`/tv/${data.id}/crew`}>
                   <a className="flex items-center text-gray-400 transition duration-300 hover:text-gray-100">
                     <span>{intl.formatMessage(messages.viewfullcrew)}</span>
-                    <ArrowCircleRightIcon className="ml-1.5 inline-block h-5 w-5" />
+                    <ArrowRightCircleIcon className="ml-1.5 inline-block h-5 w-5" />
                   </a>
                 </Link>
               </div>
             </>
+          )}
+          {data.keywords.length > 0 && (
+            <div className="mt-6">
+              {data.keywords.map((keyword) => (
+                <Link
+                  href={`/discover/tv?keywords=${keyword.id}`}
+                  key={`keyword-id-${keyword.id}`}
+                >
+                  <a className="mb-2 mr-2 inline-flex last:mr-0">
+                    <Tag>{keyword.name}</Tag>
+                  </a>
+                </Link>
+              ))}
+            </div>
           )}
           <h2 className="py-4">{intl.formatMessage(messages.seasonstitle)}</h2>
           <div className="flex w-full flex-col space-y-2">
@@ -535,6 +558,10 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                       (s) => s.seasonNumber === season.seasonNumber
                     ) && r.is4k
                 );
+
+                if (season.episodeCount === 0) {
+                  return null;
+                }
 
                 return (
                   <Disclosure key={`season-discoslure-${season.seasonNumber}`}>
@@ -706,20 +733,20 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                                 </div>
                               </>
                             )}
-                          <ChevronUpIcon
+                          <ChevronDownIcon
                             className={`${
-                              open ? 'rotate-180 transform' : ''
+                              open ? 'rotate-180' : ''
                             } h-6 w-6 text-gray-500`}
                           />
                         </Disclosure.Button>
                         <Transition
                           show={open}
-                          enter="transition duration-100 ease-out"
-                          enterFrom="transform opacity-0"
-                          enterTo="transform opacity-100"
-                          leave="transition duration-75 ease-out"
-                          leaveFrom="transform opacity-100"
-                          leaveTo="transform opacity-0"
+                          enter="transition-opacity duration-100 ease-out"
+                          enterFrom="opacity-0"
+                          enterTo="opacity-100"
+                          leave="transition-opacity duration-75 ease-out"
+                          leaveFrom="opacity-100"
+                          leaveTo="opacity-0"
                           // Not sure why this transition is adding a margin without this here
                           style={{ margin: '0px' }}
                         >
@@ -796,12 +823,13 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                 )}
               </div>
             )}
-            {data.originalName && data.originalLanguage !== locale.slice(0, 2) && (
-              <div className="media-fact">
-                <span>{intl.formatMessage(messages.originaltitle)}</span>
-                <span className="media-fact-value">{data.originalName}</span>
-              </div>
-            )}
+            {data.originalName &&
+              data.originalLanguage !== locale.slice(0, 2) && (
+                <div className="media-fact">
+                  <span>{intl.formatMessage(messages.originaltitle)}</span>
+                  <span className="media-fact-value">{data.originalName}</span>
+                </div>
+              )}
             {data.keywords.some(
               (keyword) => keyword.id === ANIME_KEYWORD_ID
             ) && (
@@ -824,6 +852,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',
+                    timeZone: 'UTC',
                   })}
                 </span>
               </div>
@@ -838,6 +867,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
+                      timeZone: 'UTC',
                     })}
                   </span>
                 </div>
@@ -962,7 +992,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
             <Link href="/tv/[tvId]/cast" as={`/tv/${data.id}/cast`}>
               <a className="slider-title">
                 <span>{intl.formatMessage(messages.cast)}</span>
-                <ArrowCircleRightIcon />
+                <ArrowRightCircleIcon />
               </a>
             </Link>
           </div>
@@ -996,7 +1026,7 @@ const TvDetails = ({ tv }: TvDetailsProps) => {
         linkUrl={`/tv/${data.id}/similar`}
         hideWhenEmpty
       />
-      <div className="pb-8" />
+      <div className="extra-bottom-space relative" />
     </div>
   );
 };

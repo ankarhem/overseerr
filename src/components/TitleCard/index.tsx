@@ -1,6 +1,7 @@
 import Spinner from '@app/assets/spinner.svg';
 import Button from '@app/components/Common/Button';
 import CachedImage from '@app/components/Common/CachedImage';
+import StatusBadgeMini from '@app/components/Common/StatusBadgeMini';
 import RequestModal from '@app/components/RequestModal';
 import ErrorCard from '@app/components/TitleCard/ErrorCard';
 import Placeholder from '@app/components/TitleCard/Placeholder';
@@ -9,8 +10,7 @@ import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import { withProperties } from '@app/utils/typeHelpers';
 import { Transition } from '@headlessui/react';
-import { DownloadIcon } from '@heroicons/react/outline';
-import { BellIcon, CheckIcon, ClockIcon } from '@heroicons/react/solid';
+import { ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import { MediaStatus } from '@server/constants/media';
 import type { MediaType } from '@server/models/Search';
 import Link from 'next/link';
@@ -23,7 +23,7 @@ interface TitleCardProps {
   summary?: string;
   year?: string;
   title: string;
-  userScore: number;
+  userScore?: number;
   mediaType: MediaType;
   status?: MediaStatus;
   canExpand?: boolean;
@@ -73,7 +73,9 @@ const TitleCard = ({
   const showRequestButton = hasPermission(
     [
       Permission.REQUEST,
-      mediaType === 'movie' ? Permission.REQUEST_MOVIE : Permission.REQUEST_TV,
+      mediaType === 'movie' || mediaType === 'collection'
+        ? Permission.REQUEST_MOVIE
+        : Permission.REQUEST_TV,
     ],
     { type: 'or' }
   );
@@ -86,7 +88,13 @@ const TitleCard = ({
       <RequestModal
         tmdbId={id}
         show={showRequestModal}
-        type={mediaType === 'movie' ? 'movie' : 'tv'}
+        type={
+          mediaType === 'movie'
+            ? 'movie'
+            : mediaType === 'collection'
+            ? 'collection'
+            : 'tv'
+        }
         onComplete={requestComplete}
         onUpdating={requestUpdating}
         onCancel={closeModal}
@@ -129,46 +137,37 @@ const TitleCard = ({
           />
           <div className="absolute left-0 right-0 flex items-center justify-between p-2">
             <div
-              className={`pointer-events-none z-40 rounded-full shadow ${
-                mediaType === 'movie' ? 'bg-blue-500' : 'bg-purple-600'
+              className={`pointer-events-none z-40 rounded-full border bg-opacity-80 shadow-md ${
+                mediaType === 'movie' || mediaType === 'collection'
+                  ? 'border-blue-500 bg-blue-600'
+                  : 'border-purple-600 bg-purple-600'
               }`}
             >
               <div className="flex h-4 items-center px-2 py-2 text-center text-xs font-medium uppercase tracking-wider text-white sm:h-5">
                 {mediaType === 'movie'
                   ? intl.formatMessage(globalMessages.movie)
+                  : mediaType === 'collection'
+                  ? intl.formatMessage(globalMessages.collection)
                   : intl.formatMessage(globalMessages.tvshow)}
               </div>
             </div>
-            <div className="pointer-events-none z-40">
-              {(currentStatus === MediaStatus.AVAILABLE ||
-                currentStatus === MediaStatus.PARTIALLY_AVAILABLE) && (
-                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-green-400 text-white shadow sm:h-5 sm:w-5">
-                  <CheckIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                </div>
-              )}
-              {currentStatus === MediaStatus.PENDING && (
-                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-yellow-500 text-white shadow sm:h-5 sm:w-5">
-                  <BellIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                </div>
-              )}
-              {currentStatus === MediaStatus.PROCESSING && (
-                <div className="flex h-4 w-4 items-center justify-center rounded-full bg-indigo-500 text-white shadow sm:h-5 sm:w-5">
-                  {inProgress ? (
-                    <Spinner className="h-3 w-3" />
-                  ) : (
-                    <ClockIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                  )}
-                </div>
-              )}
-            </div>
+            {currentStatus && currentStatus !== MediaStatus.UNKNOWN && (
+              <div className="pointer-events-none z-40 flex items-center">
+                <StatusBadgeMini
+                  status={currentStatus}
+                  inProgress={inProgress}
+                  shrink
+                />
+              </div>
+            )}
           </div>
           <Transition
             as={Fragment}
             show={isUpdating}
-            enter="transition ease-in-out duration-300 transform opacity-0"
+            enter="transition-opacity ease-in-out duration-300"
             enterFrom="opacity-0"
             enterTo="opacity-100"
-            leave="transition ease-in-out duration-300 transform opacity-100"
+            leave="transition-opacity ease-in-out duration-300"
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
@@ -180,15 +179,23 @@ const TitleCard = ({
           <Transition
             as={Fragment}
             show={!image || showDetail || showRequestModal}
-            enter="transition transform opacity-0"
+            enter="transition-opacity"
             enterFrom="opacity-0"
             enterTo="opacity-100"
-            leave="transition transform opacity-100"
+            leave="transition-opacity"
             leaveFrom="opacity-100"
             leaveTo="opacity-0"
           >
             <div className="absolute inset-0 overflow-hidden rounded-xl">
-              <Link href={mediaType === 'movie' ? `/movie/${id}` : `/tv/${id}`}>
+              <Link
+                href={
+                  mediaType === 'movie'
+                    ? `/movie/${id}`
+                    : mediaType === 'collection'
+                    ? `/collection/${id}`
+                    : `/tv/${id}`
+                }
+              >
                 <a
                   className="absolute inset-0 h-full w-full cursor-pointer overflow-hidden text-left"
                   style={{
@@ -256,7 +263,7 @@ const TitleCard = ({
                       }}
                       className="h-7 w-full"
                     >
-                      <DownloadIcon />
+                      <ArrowDownTrayIcon />
                       <span>{intl.formatMessage(globalMessages.request)}</span>
                     </Button>
                   )}

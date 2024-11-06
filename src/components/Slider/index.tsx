@@ -1,6 +1,6 @@
 import TitleCard from '@app/components/TitleCard';
 import globalMessages from '@app/i18n/globalMessages';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/outline';
+import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
 import { debounce } from 'lodash';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useIntl } from 'react-intl';
@@ -156,6 +156,7 @@ const Slider = ({
           }`}
           onClick={() => slide(Direction.LEFT)}
           disabled={scrollPos.isStart}
+          type="button"
         >
           <ChevronLeftIcon className="h-6 w-6" />
         </button>
@@ -165,6 +166,7 @@ const Slider = ({
           }`}
           onClick={() => slide(Direction.RIGHT)}
           disabled={scrollPos.isEnd}
+          type="button"
         >
           <ChevronRightIcon className="h-6 w-6" />
         </button>

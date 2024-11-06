@@ -8,7 +8,7 @@ import PlexLoginButton from '@app/components/PlexLoginButton';
 import useSettings from '@app/hooks/useSettings';
 import { useUser } from '@app/hooks/useUser';
 import { Transition } from '@headlessui/react';
-import { XCircleIcon } from '@heroicons/react/solid';
+import { XCircleIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 import { useRouter } from 'next/dist/client/router';
 import { useEffect, useState } from 'react';
@@ -97,10 +97,10 @@ const Login = () => {
             <Transition
               as="div"
               show={!!error}
-              enter="opacity-0 transition duration-300"
+              enter="transition-opacity duration-300"
               enterFrom="opacity-0"
               enterTo="opacity-100"
-              leave="opacity-100 transition duration-300"
+              leave="transition-opacity duration-300"
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
             >
@@ -144,7 +144,9 @@ const Login = () => {
                     <div>
                       <button
                         className={`w-full cursor-default bg-gray-800 bg-opacity-70 py-2 text-center text-sm font-bold text-gray-400 transition-colors duration-200 hover:cursor-pointer hover:bg-gray-700 focus:outline-none ${
-                          openIndexes.includes(1) ? 'text-indigo-500' : ''
+                          openIndexes.includes(1)
+                            ? 'text-indigo-500'
+                            : 'sm:rounded-b-lg' 
                         }`}
                         onClick={() => handleClick(1)}
                       >

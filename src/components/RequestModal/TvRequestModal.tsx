@@ -232,7 +232,9 @@ const TvRequestModal = ({
 
   const getAllSeasons = (): number[] => {
     return (data?.seasons ?? [])
-      .filter((season) => season.seasonNumber !== 0)
+      .filter(
+        (season) => season.seasonNumber !== 0 && season.episodeCount !== 0
+      )
       .map((season) => season.seasonNumber);
   };
 
@@ -538,7 +540,7 @@ const TvRequestModal = ({
                           aria-hidden="true"
                           className={`${
                             isAllSeasons() ? 'translate-x-5' : 'translate-x-0'
-                          } absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow transition-transform duration-200 ease-in-out group-focus:border-blue-300 group-focus:ring`}
+                          } absolute left-0 inline-block h-5 w-5 rounded-full border border-gray-200 bg-white shadow transition-transform duration-200 ease-in-out group-focus:border-blue-300 group-focus:ring`}
                         ></span>
                       </span>
                     </th>
@@ -555,7 +557,10 @@ const TvRequestModal = ({
                 </thead>
                 <tbody className="divide-y divide-gray-700">
                   {data?.seasons
-                    .filter((season) => season.seasonNumber !== 0)
+                    .filter(
+                      (season) =>
+                        season.seasonNumber !== 0 && season.episodeCount !== 0
+                    )
                     .map((season) => {
                       const seasonRequest = getSeasonRequest(
                         season.seasonNumber
@@ -626,7 +631,7 @@ const TvRequestModal = ({
                                   isSelectedSeason(season.seasonNumber)
                                     ? 'translate-x-5'
                                     : 'translate-x-0'
-                                } absolute left-0 inline-block h-5 w-5 transform rounded-full border border-gray-200 bg-white shadow transition-transform duration-200 ease-in-out group-focus:border-blue-300 group-focus:ring`}
+                                } absolute left-0 inline-block h-5 w-5 rounded-full border border-gray-200 bg-white shadow transition-transform duration-200 ease-in-out group-focus:border-blue-300 group-focus:ring`}
                               ></span>
                             </span>
                           </td>

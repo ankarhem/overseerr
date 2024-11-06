@@ -4,15 +4,17 @@ import CachedImage from '@app/components/Common/CachedImage';
 import ConfirmButton from '@app/components/Common/ConfirmButton';
 import RequestModal from '@app/components/RequestModal';
 import StatusBadge from '@app/components/StatusBadge';
+import useDeepLinks from '@app/hooks/useDeepLinks';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
+import { refreshIntervalHelper } from '@app/utils/refreshIntervalHelper';
 import {
+  ArrowPathIcon,
   CheckIcon,
   PencilIcon,
-  RefreshIcon,
   TrashIcon,
-  XIcon,
-} from '@heroicons/react/solid';
+  XMarkIcon,
+} from '@heroicons/react/24/solid';
 import { MediaRequestStatus } from '@server/constants/media';
 import type { MediaRequest } from '@server/entity/MediaRequest';
 import type { MovieDetails } from '@server/models/Movie';
@@ -38,6 +40,7 @@ const messages = defineMessages({
   cancelRequest: 'Cancel Request',
   tmdbid: 'TMDB ID',
   tvdbid: 'TheTVDB ID',
+  unknowntitle: 'Unknown Title',
 });
 
 const isMovie = (movie: MovieDetails | TvDetails): movie is MovieDetails => {
@@ -60,6 +63,13 @@ const RequestItemError = ({
     await axios.delete(`/api/v1/media/${requestData?.media.id}`);
     revalidateList();
   };
+
+  const { plexUrl, plexUrl4k } = useDeepLinks({
+    plexUrl: requestData?.media?.plexUrl,
+    plexUrl4k: requestData?.media?.plexUrl4k,
+    iOSPlexUrl: requestData?.media?.iOSPlexUrl,
+    iOSPlexUrl4k: requestData?.media?.iOSPlexUrl4k,
+  });
 
   return (
     <div className="flex h-64 w-full flex-col justify-center rounded-xl bg-gray-800 py-4 text-gray-400 shadow-md ring-1 ring-red-500 xl:h-28 xl:flex-row">
@@ -120,6 +130,12 @@ const RequestItemError = ({
                         requestData.is4k ? 'status4k' : 'status'
                       ]
                     }
+                    downloadItem={
+                      requestData.media[
+                        requestData.is4k ? 'downloadStatus4k' : 'downloadStatus'
+                      ]
+                    }
+                    title={intl.formatMessage(messages.unknowntitle)}
                     inProgress={
                       (
                         requestData.media[
@@ -130,11 +146,8 @@ const RequestItemError = ({
                       ).length > 0
                     }
                     is4k={requestData.is4k}
-                    plexUrl={
-                      requestData.is4k
-                        ? requestData.media.plexUrl4k
-                        : requestData.media.plexUrl
-                    }
+                    mediaType={requestData.type}
+                    plexUrl={requestData.is4k ? plexUrl4k : plexUrl}
                     serviceUrl={
                       requestData.is4k
                         ? requestData.media.serviceUrl4k
@@ -281,6 +294,13 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
     `/api/v1/request/${request.id}`,
     {
       fallbackData: request,
+      refreshInterval: refreshIntervalHelper(
+        {
+          downloadStatus: request.media.downloadStatus,
+          downloadStatus4k: request.media.downloadStatus4k,
+        },
+        15000
+      ),
     }
   );
 
@@ -315,6 +335,13 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
       setRetrying(false);
     }
   };
+
+  const { plexUrl, plexUrl4k } = useDeepLinks({
+    plexUrl: requestData?.media?.plexUrl,
+    plexUrl4k: requestData?.media?.plexUrl4k,
+    iOSPlexUrl: requestData?.media?.iOSPlexUrl,
+    iOSPlexUrl4k: requestData?.media?.iOSPlexUrl4k,
+  });
 
   if (!title && !error) {
     return (
@@ -452,6 +479,12 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                   status={
                     requestData.media[requestData.is4k ? 'status4k' : 'status']
                   }
+                  downloadItem={
+                    requestData.media[
+                      requestData.is4k ? 'downloadStatus4k' : 'downloadStatus'
+                    ]
+                  }
+                  title={isMovie(title) ? title.title : title.name}
                   inProgress={
                     (
                       requestData.media[
@@ -462,11 +495,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                   is4k={requestData.is4k}
                   tmdbId={requestData.media.tmdbId}
                   mediaType={requestData.type}
-                  plexUrl={
-                    requestData.is4k
-                      ? requestData.media.plexUrl4k
-                      : requestData.media.plexUrl
-                  }
+                  plexUrl={requestData.is4k ? plexUrl4k : plexUrl}
                   serviceUrl={
                     requestData.is4k
                       ? requestData.media.serviceUrl4k
@@ -580,7 +609,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                 disabled={isRetrying}
                 onClick={() => retryRequest()}
               >
-                <RefreshIcon
+                <ArrowPathIcon
                   className={isRetrying ? 'animate-spin' : ''}
                   style={{ animationDirection: 'reverse' }}
                 />
@@ -621,7 +650,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                     buttonType="danger"
                     onClick={() => modifyRequest('decline')}
                   >
-                    <XIcon />
+                    <XMarkIcon />
                     <span>{intl.formatMessage(globalMessages.decline)}</span>
                   </Button>
                 </span>
@@ -651,7 +680,7 @@ const RequestItem = ({ request, revalidateList }: RequestItemProps) => {
                 confirmText={intl.formatMessage(globalMessages.areyousure)}
                 className="w-full"
               >
-                <XIcon />
+                <XMarkIcon />
                 <span>{intl.formatMessage(messages.cancelRequest)}</span>
               </ConfirmButton>
             )}

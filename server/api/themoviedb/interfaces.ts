@@ -28,6 +28,18 @@ export interface TmdbTvResult extends TmdbMediaResult {
   first_air_date: string;
 }
 
+export interface TmdbCollectionResult {
+  id: number;
+  media_type: 'collection';
+  title: string;
+  original_title: string;
+  adult: boolean;
+  poster_path?: string;
+  backdrop_path?: string;
+  overview: string;
+  original_language: string;
+}
+
 export interface TmdbPersonResult {
   id: number;
   name: string;
@@ -45,7 +57,12 @@ interface TmdbPaginatedResponse {
 }
 
 export interface TmdbSearchMultiResponse extends TmdbPaginatedResponse {
-  results: (TmdbMovieResult | TmdbTvResult | TmdbPersonResult)[];
+  results: (
+    | TmdbMovieResult
+    | TmdbTvResult
+    | TmdbPersonResult
+    | TmdbCollectionResult
+  )[];
 }
 
 export interface TmdbSearchMovieResponse extends TmdbPaginatedResponse {
@@ -170,6 +187,9 @@ export interface TmdbMovieDetails {
   'watch/providers'?: {
     id: number;
     results?: { [iso_3166_1: string]: TmdbWatchProviders };
+  };
+  keywords: {
+    keywords: TmdbKeyword[];
   };
 }
 
@@ -372,7 +392,8 @@ export interface TmdbPersonCombinedCredits {
   crew: TmdbPersonCreditCrew[];
 }
 
-export interface TmdbSeasonWithEpisodes extends TmdbTvSeasonResult {
+export interface TmdbSeasonWithEpisodes
+  extends Omit<TmdbTvSeasonResult, 'episode_count'> {
   episodes: TmdbTvEpisodeResult[];
   external_ids: TmdbExternalIds;
 }
@@ -426,4 +447,25 @@ export interface TmdbWatchProviderDetails {
   logo_path?: string;
   provider_id: number;
   provider_name: string;
+}
+
+export interface TmdbKeywordSearchResponse extends TmdbPaginatedResponse {
+  results: TmdbKeyword[];
+}
+
+// We have production companies, but the company search results return less data
+export interface TmdbCompany {
+  id: number;
+  logo_path?: string;
+  name: string;
+}
+
+export interface TmdbCompanySearchResponse extends TmdbPaginatedResponse {
+  results: TmdbCompany[];
+}
+
+export interface TmdbWatchProviderRegion {
+  iso_3166_1: string;
+  english_name: string;
+  native_name: string;
 }

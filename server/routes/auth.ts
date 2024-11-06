@@ -6,12 +6,13 @@ import { Permission } from '@server/lib/permissions';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
 import { isAuthenticated } from '@server/middleware/auth';
-import { Router } from 'express';
+import { Router, Request } from 'express';
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import {
   createJwtSchema,
   getOIDCRedirectUrl,
   getOIDCWellknownConfiguration,
+  OIDCJwtPayload,
 } from '@server/utils/oidc';
 import { randomBytes } from 'crypto';
 import gravatarUrl from 'gravatar-url';
@@ -74,13 +75,28 @@ authRoutes.post('/plex', async (req, res, next) => {
       await userRepository.save(user);
     } else {
       const mainUser = await userRepository.findOneOrFail({
-        select: { id: true, plexToken: true, plexId: true },
+        select: { id: true, plexToken: true, plexId: true, email: true },
         where: { id: 1 },
       });
       const mainPlexTv = new PlexTvAPI(mainUser.plexToken ?? '');
 
+      if (!account.id) {
+        logger.error('Plex ID was missing from Plex.tv response', {
+          label: 'API',
+          ip: req.ip,
+          email: account.email,
+          plexUsername: account.username,
+        });
+
+        return next({
+          status: 500,
+          message: 'Something went wrong. Try again.',
+        });
+      }
+
       if (
         account.id === mainUser.plexId ||
+        (account.email === mainUser.email && !mainUser.plexId) ||
         (await mainPlexTv.checkUserAccess(account.id))
       ) {
         if (user) {
@@ -414,30 +430,68 @@ authRoutes.post('/reset-password/:guid', async (req, res, next) => {
   return res.status(200).json({ status: 'ok' });
 });
 
-authRoutes.get('/oidc-login', async (req, res, next) => {
-  const state = randomBytes(32).toString('hex');
-  const redirectUrl = await getOIDCRedirectUrl(req, state);
 
-  res.cookie('oidc-state', state, {
-    maxAge: 60000,
-    httpOnly: true,
-    secure: req.protocol === 'https',
-  });
-  return res.redirect(redirectUrl);
+authRoutes.get('/oidc-login', async (req, res, next) => {
+  try {
+    const state = randomBytes(32).toString('hex');
+    const redirectUrl = await getOIDCRedirectUrl(req, state);
+
+    res.cookie('oidc-state', state, {
+      maxAge: 60000,
+      httpOnly: true,
+      secure: req.protocol === 'https',
+    });
+
+    logger.debug('OIDC login initiated', {
+      path: '/oidc-login',
+      redirectUrl: redirectUrl,
+      state: state,
+    });
+
+    return res.redirect(redirectUrl);
+  } catch (error) {
+    logger.error('Failed to initiate OIDC login', {
+      path: '/oidc-login',
+      error: error.message,
+    });
+    next(error); // Or handle the error as appropriate for your application
+  }
 });
 
+
 authRoutes.get('/oidc-callback', async (req, res, next) => {
-  const settings = getSettings();
-  const { oidcDomain, oidcClientId, oidcClientSecret } = settings.main;
-
-  if (!settings.main.oidcLogin) {
-    return res.status(500).json({ error: 'OIDC sign-in is disabled.' });
-  }
-  const cookieState = req.cookies['oidc-state'];
-  const url = new URL(req.url, `${req.protocol}://${req.hostname}`);
-  const state = url.searchParams.get('state');
-
   try {
+    const logRequestInfo = (req: Request) => {
+      const remoteIp = req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+      const requestInfo = {
+        method: req.method,
+        url: req.url,
+        headers: req.headers,
+        remoteIp: remoteIp,
+      };
+      return requestInfo;
+    };
+
+    logger.info('OIDC callback initiated', { req: logRequestInfo(req) });
+
+    const settings = getSettings();
+    const { oidcDomain, oidcClientId, oidcClientSecret } = settings.main;
+
+    if (!settings.main.oidcLogin) {
+      return res.status(500).json({ error: 'OIDC sign-in is disabled.' });
+    }
+
+    const cookieState = req.cookies['oidc-state'];
+    const url = new URL(req.url, `${req.protocol}://${req.hostname}`);
+    const state = url.searchParams.get('state');
+    const scope = url.searchParams.get('scope'); // Optional scope parameter
+
+    if (scope) {
+      logger.info('OIDC callback with scope', { scope });
+    } else {
+      logger.info('OIDC callback without scope');
+    }
+
     // Check that the request belongs to the correct state
     if (state && cookieState === state) {
       res.clearCookie('oidc-state');
@@ -451,7 +505,6 @@ authRoutes.get('/oidc-callback', async (req, res, next) => {
       return res.redirect('/login');
     }
 
-    // Check that a code as been issued
     const code = url.searchParams.get('code');
     if (!code) {
       logger.info('Failed OIDC login attempt', {
@@ -464,55 +517,48 @@ authRoutes.get('/oidc-callback', async (req, res, next) => {
 
     const wellKnownInfo = await getOIDCWellknownConfiguration(oidcDomain);
 
-    // Fetch the token data
-    const callbackUrl = new URL(
-      '/api/v1/auth/oidc-callback',
-      `${req.protocol}://${req.headers.host}`
-    );
-
+    const callbackUrl = new URL('/api/v1/auth/oidc-callback', `${req.protocol}://${req.headers.host}`);
     const formData = new URLSearchParams();
     formData.append('client_secret', oidcClientSecret);
     formData.append('grant_type', 'authorization_code');
     formData.append('redirect_uri', callbackUrl.toString());
     formData.append('client_id', oidcClientId);
     formData.append('code', code);
+    if (scope) {
+      formData.append('scope', scope);
+    }
+
     const response = await fetch(wellKnownInfo.token_endpoint, {
       method: 'POST',
-      headers: new Headers([
-        ['Content-Type', 'application/x-www-form-urlencoded'],
-      ]),
+      headers: new Headers([['Content-Type', 'application/x-www-form-urlencoded']]),
       body: formData,
     });
 
-    // Check that the response is valid
     const body = (await response.json()) as
       | { id_token: string; error: never }
       | { error: string };
+
     if (body.error) {
       logger.info('Failed OIDC login attempt', {
-        cause: 'Invalid token response',
+        cause: `Invalid token response: ${body.error}`,
         ip: req.ip,
         body: body,
       });
       return res.redirect('/login');
     }
 
-    // Validate that the token response is valid and not manipulated
-    const { id_token: idToken } = body as Extract<
-      typeof body,
-      { id_token: string }
-    >;
+    const { id_token: idToken } = body as Extract<typeof body, { id_token: string }>;
     try {
-      const decoded = decodeJwt(idToken);
+      const decoded = decodeJwt<OIDCJwtPayload>(idToken);
       const jwtSchema = createJwtSchema({
         oidcClientId: oidcClientId,
         oidcDomain: oidcDomain,
       });
 
       await jwtSchema.validate(decoded);
-    } catch {
+    } catch (error) {
       logger.info('Failed OIDC login attempt', {
-        cause: 'Invalid jwt',
+        cause: `Invalid JWT: ${error.message}`,
         ip: req.ip,
         idToken: idToken,
       });
@@ -561,13 +607,17 @@ authRoutes.get('/oidc-callback', async (req, res, next) => {
     }
     return res.redirect('/');
   } catch (error) {
-    logger.error('Failed OIDC login attempt', {
-      cause: 'Unknown error',
-      ip: req.ip,
-      errorMessage: error.message,
+    // Log the error details
+    logger.error('Error in OIDC callback', {
+      path: '/oidc-callback',
+      error: error.message,
+      stack: error.stack, // Include the error stack trace for debugging
     });
-    return res.redirect('/login');
+
+    // Handle the error as appropriate for your application
+    next(error);
   }
 });
+
 
 export default authRoutes;

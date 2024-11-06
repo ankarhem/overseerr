@@ -2,7 +2,7 @@ import Button from '@app/components/Common/Button';
 import Modal from '@app/components/Common/Modal';
 import { Permission, useUser } from '@app/hooks/useUser';
 import { Menu, Transition } from '@headlessui/react';
-import { DotsVerticalIcon } from '@heroicons/react/solid';
+import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 import type { default as IssueCommentType } from '@server/entity/IssueComment';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
@@ -65,10 +65,10 @@ const IssueComment = ({
     >
       <Transition
         as={Fragment}
-        enter="transition opacity-0 duration-300"
+        enter="transition-opacity duration-300"
         enterFrom="opacity-0"
         enterTo="opacity-100"
-        leave="transition opacity-100 duration-300"
+        leave="transition-opacity duration-300"
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
         show={showDeleteModal}
@@ -104,7 +104,7 @@ const IssueComment = ({
                   <div>
                     <Menu.Button className="flex items-center rounded-full text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
                       <span className="sr-only">Open options</span>
-                      <DotsVerticalIcon
+                      <EllipsisVerticalIcon
                         className="h-5 w-5"
                         aria-hidden="true"
                       />
@@ -115,11 +115,11 @@ const IssueComment = ({
                     as={Fragment}
                     show={open}
                     enter="transition ease-out duration-100"
-                    enterFrom="transform opacity-0 scale-95"
-                    enterTo="transform opacity-100 scale-100"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
                     leave="transition ease-in duration-75"
-                    leaveFrom="transform opacity-100 scale-100"
-                    leaveTo="transform opacity-0 scale-95"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
                   >
                     <Menu.Items
                       static
@@ -164,7 +164,7 @@ const IssueComment = ({
             </Menu>
           )}
           <div
-            className={`absolute top-3 z-10 h-3 w-3 rotate-45 transform bg-gray-800 shadow ring-1 ring-gray-500 ${
+            className={`absolute top-3 z-10 h-3 w-3 rotate-45 bg-gray-800 shadow ring-1 ring-gray-500 ${
               isReversed ? '-left-1' : '-right-1'
             }`}
           />

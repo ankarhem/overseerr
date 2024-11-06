@@ -704,7 +704,7 @@ export class MediaRequest {
 
         let rootFolder = radarrSettings.activeDirectory;
         let qualityProfile = radarrSettings.activeProfileId;
-        let tags = radarrSettings.tags;
+        let tags = radarrSettings.tags ? [...radarrSettings.tags] : [];
 
         if (
           this.rootFolder &&
@@ -764,10 +764,51 @@ export class MediaRequest {
           return;
         }
 
+        if (radarrSettings.tagRequests) {
+          let userTag = (await radarr.getTags()).find((v) =>
+            v.label.startsWith(this.requestedBy.id + ' - ')
+          );
+          if (!userTag) {
+            logger.info(`Requester has no active tag. Creating new`, {
+              label: 'Media Request',
+              requestId: this.id,
+              mediaId: this.media.id,
+              userId: this.requestedBy.id,
+              newTag:
+                this.requestedBy.id + ' - ' + this.requestedBy.displayName,
+            });
+            userTag = await radarr.createTag({
+              label: this.requestedBy.id + ' - ' + this.requestedBy.displayName,
+            });
+          }
+          if (userTag.id) {
+            if (!tags?.find((v) => v === userTag?.id)) {
+              tags?.push(userTag.id);
+            }
+          } else {
+            logger.warn(`Requester has no tag and failed to add one`, {
+              label: 'Media Request',
+              requestId: this.id,
+              mediaId: this.media.id,
+              userId: this.requestedBy.id,
+              radarrServer: radarrSettings.hostname + ':' + radarrSettings.port,
+            });
+          }
+        }
+
         if (
           media[this.is4k ? 'status4k' : 'status'] === MediaStatus.AVAILABLE
         ) {
-          throw new Error('Media already available');
+          logger.warn('Media already exists, marking request as APPROVED', {
+            label: 'Media Request',
+            requestId: this.id,
+            mediaId: this.media.id,
+          });
+
+          const requestRepository = getRepository(MediaRequest);
+          this.status = MediaRequestStatus.APPROVED;
+          await requestRepository.save(this);
+          return;
         }
 
         const radarrMovieOptions: RadarrMovieOptions = {
@@ -908,7 +949,16 @@ export class MediaRequest {
         if (
           media[this.is4k ? 'status4k' : 'status'] === MediaStatus.AVAILABLE
         ) {
-          throw new Error('Media already available');
+          logger.warn('Media already exists, marking request as APPROVED', {
+            label: 'Media Request',
+            requestId: this.id,
+            mediaId: this.media.id,
+          });
+
+          const requestRepository = getRepository(MediaRequest);
+          this.status = MediaRequestStatus.APPROVED;
+          await requestRepository.save(this);
+          return;
         }
 
         const tmdb = new TheMovieDb();
@@ -934,7 +984,7 @@ export class MediaRequest {
             (keyword) => keyword.id === ANIME_KEYWORD_ID
           )
         ) {
-          seriesType = 'anime';
+          seriesType = sonarrSettings.animeSeriesType ?? 'anime';
         }
 
         let rootFolder =
@@ -952,7 +1002,11 @@ export class MediaRequest {
         let tags =
           seriesType === 'anime'
             ? sonarrSettings.animeTags
-            : sonarrSettings.tags;
+              ? [...sonarrSettings.animeTags]
+              : []
+            : sonarrSettings.tags
+            ? [...sonarrSettings.tags]
+            : [];
 
         if (
           this.rootFolder &&
@@ -1002,6 +1056,38 @@ export class MediaRequest {
             mediaId: this.media.id,
             tagIds: tags,
           });
+        }
+
+        if (sonarrSettings.tagRequests) {
+          let userTag = (await sonarr.getTags()).find((v) =>
+            v.label.startsWith(this.requestedBy.id + ' - ')
+          );
+          if (!userTag) {
+            logger.info(`Requester has no active tag. Creating new`, {
+              label: 'Media Request',
+              requestId: this.id,
+              mediaId: this.media.id,
+              userId: this.requestedBy.id,
+              newTag:
+                this.requestedBy.id + ' - ' + this.requestedBy.displayName,
+            });
+            userTag = await sonarr.createTag({
+              label: this.requestedBy.id + ' - ' + this.requestedBy.displayName,
+            });
+          }
+          if (userTag.id) {
+            if (!tags?.find((v) => v === userTag?.id)) {
+              tags?.push(userTag.id);
+            }
+          } else {
+            logger.warn(`Requester has no tag and failed to add one`, {
+              label: 'Media Request',
+              requestId: this.id,
+              mediaId: this.media.id,
+              userId: this.requestedBy.id,
+              sonarrServer: sonarrSettings.hostname + ':' + sonarrSettings.port,
+            });
+          }
         }
 
         const sonarrSeriesOptions: AddSeriesOptions = {
@@ -1169,3 +1255,5 @@ export class MediaRequest {
     }
   }
 }
+
+export default MediaRequest;

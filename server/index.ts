@@ -1,5 +1,6 @@
 import PlexAPI from '@server/api/plexapi';
 import dataSource, { getRepository } from '@server/datasource';
+import DiscoverSlider from '@server/entity/DiscoverSlider';
 import { Session } from '@server/entity/Session';
 import { User } from '@server/entity/User';
 import { startJobs } from '@server/job/schedule';
@@ -16,7 +17,9 @@ import WebhookAgent from '@server/lib/notifications/agents/webhook';
 import WebPushAgent from '@server/lib/notifications/agents/webpush';
 import { getSettings } from '@server/lib/settings';
 import logger from '@server/logger';
+import clearCookies from '@server/middleware/clearcookies';
 import routes from '@server/routes';
+import imageproxy from '@server/routes/imageproxy';
 import { getAppVersion } from '@server/utils/appVersion';
 import restartFlag from '@server/utils/restartFlag';
 import { getClientIp } from '@supercharge/request-ip';
@@ -39,6 +42,15 @@ logger.info(`Starting Overseerr version ${getAppVersion()}`);
 const dev = process.env.NODE_ENV !== 'production';
 const app = next({ dev });
 const handle = app.getRequestHandler();
+
+const logMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  // Log information about the incoming request
+  logger.debug(`Request Method: ${req.method}`);
+  logger.debug(`Request URL: ${req.url}`);
+  logger.debug(`Request Headers: ${JSON.stringify(req.headers)}`);
+  logger.debug(`Request Body: ${JSON.stringify(req.body)}`);
+  next();
+};
 
 app
   .prepare()
@@ -94,7 +106,13 @@ app
     // Start Jobs
     startJobs();
 
+    // Bootstrap Discovery Sliders
+    await DiscoverSlider.bootstrapSliders();
+
     const server = express();
+
+    server.use(logMiddleware);
+
     if (settings.main.trustProxy) {
       server.enable('trust proxy');
     }
@@ -146,7 +164,7 @@ app
         cookie: {
           maxAge: 1000 * 60 * 60 * 24 * 30,
           httpOnly: true,
-          sameSite: true,
+          sameSite: settings.main.csrfProtection ? 'strict' : 'lax',
           secure: 'auto',
         },
         store: new TypeormStore({
@@ -157,12 +175,12 @@ app
     );
     const apiDocs = YAML.load(API_SPEC_PATH);
     server.use('/api-docs', swaggerUi.serve, swaggerUi.setup(apiDocs));
-    server.use(
-      OpenApiValidator.middleware({
-        apiSpec: API_SPEC_PATH,
-        validateRequests: true,
-      })
-    );
+    // server.use(
+    //   OpenApiValidator.middleware({
+    //     apiSpec: API_SPEC_PATH,
+    //     validateRequests: true,
+    //   })
+    // );
     /**
      * This is a workaround to convert dates to strings before they are validated by
      * OpenAPI validator. Otherwise, they are treated as objects instead of strings
@@ -176,6 +194,10 @@ app
       next();
     });
     server.use('/api/v1', routes);
+
+    // Do not set cookies so CDNs can cache them
+    server.use('/imageproxy', clearCookies, imageproxy);
+
     server.get('*', (req, res) => handle(req, res));
     server.use(
       (

@@ -2,6 +2,7 @@ import RTAudFresh from '@app/assets/rt_aud_fresh.svg';
 import RTAudRotten from '@app/assets/rt_aud_rotten.svg';
 import RTFresh from '@app/assets/rt_fresh.svg';
 import RTRotten from '@app/assets/rt_rotten.svg';
+import ImdbLogo from '@app/assets/services/imdb.svg';
 import TmdbLogo from '@app/assets/tmdb_logo.svg';
 import Button from '@app/components/Common/Button';
 import CachedImage from '@app/components/Common/CachedImage';
@@ -9,6 +10,7 @@ import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import PageTitle from '@app/components/Common/PageTitle';
 import type { PlayButtonLink } from '@app/components/Common/PlayButton';
 import PlayButton from '@app/components/Common/PlayButton';
+import Tag from '@app/components/Common/Tag';
 import Tooltip from '@app/components/Common/Tooltip';
 import ExternalLinkBlock from '@app/components/ExternalLinkBlock';
 import IssueModal from '@app/components/IssueModal';
@@ -18,26 +20,28 @@ import PersonCard from '@app/components/PersonCard';
 import RequestButton from '@app/components/RequestButton';
 import Slider from '@app/components/Slider';
 import StatusBadge from '@app/components/StatusBadge';
+import useDeepLinks from '@app/hooks/useDeepLinks';
 import useLocale from '@app/hooks/useLocale';
 import useSettings from '@app/hooks/useSettings';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import Error from '@app/pages/_error';
 import { sortCrewPriority } from '@app/utils/creditHelpers';
+import { refreshIntervalHelper } from '@app/utils/refreshIntervalHelper';
 import {
-  ArrowCircleRightIcon,
+  ArrowRightCircleIcon,
   CloudIcon,
   CogIcon,
-  ExclamationIcon,
+  ExclamationTriangleIcon,
   FilmIcon,
   PlayIcon,
   TicketIcon,
-} from '@heroicons/react/outline';
+} from '@heroicons/react/24/outline';
 import {
   ChevronDoubleDownIcon,
   ChevronDoubleUpIcon,
-} from '@heroicons/react/solid';
-import type { RTRating } from '@server/api/rottentomatoes';
+} from '@heroicons/react/24/solid';
+import { type RatingResponse } from '@server/api/ratings';
 import { IssueStatus } from '@server/constants/issue';
 import { MediaStatus } from '@server/constants/media';
 import type { MovieDetails as MovieDetailsType } from '@server/models/Movie';
@@ -83,6 +87,7 @@ const messages = defineMessages({
   rtcriticsscore: 'Rotten Tomatoes Tomatometer',
   rtaudiencescore: 'Rotten Tomatoes Audience Score',
   tmdbuserscore: 'TMDB User Score',
+  imdbuserscore: 'IMDB User Score',
 });
 
 interface MovieDetailsProps {
@@ -108,10 +113,17 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     mutate: revalidate,
   } = useSWR<MovieDetailsType>(`/api/v1/movie/${router.query.movieId}`, {
     fallbackData: movie,
+    refreshInterval: refreshIntervalHelper(
+      {
+        downloadStatus: movie?.mediaInfo?.downloadStatus,
+        downloadStatus4k: movie?.mediaInfo?.downloadStatus4k,
+      },
+      15000
+    ),
   });
 
-  const { data: ratingData } = useSWR<RTRating>(
-    `/api/v1/movie/${router.query.movieId}/ratings`
+  const { data: ratingData } = useSWR<RatingResponse>(
+    `/api/v1/movie/${router.query.movieId}/ratingscombined`
   );
 
   const sortedCrew = useMemo(
@@ -123,29 +135,12 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     setShowManager(router.query.manage == '1' ? true : false);
   }, [router.query.manage]);
 
-  const [plexUrl, setPlexUrl] = useState(data?.mediaInfo?.plexUrl);
-  const [plexUrl4k, setPlexUrl4k] = useState(data?.mediaInfo?.plexUrl4k);
-
-  useEffect(() => {
-    if (data) {
-      if (
-        /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-        (navigator.userAgent === 'MacIntel' && navigator.maxTouchPoints > 1)
-      ) {
-        setPlexUrl(data.mediaInfo?.iOSPlexUrl);
-        setPlexUrl4k(data.mediaInfo?.iOSPlexUrl4k);
-      } else {
-        setPlexUrl(data.mediaInfo?.plexUrl);
-        setPlexUrl4k(data.mediaInfo?.plexUrl4k);
-      }
-    }
-  }, [
-    data,
-    data?.mediaInfo?.iOSPlexUrl,
-    data?.mediaInfo?.iOSPlexUrl4k,
-    data?.mediaInfo?.plexUrl,
-    data?.mediaInfo?.plexUrl4k,
-  ]);
+  const { plexUrl, plexUrl4k } = useDeepLinks({
+    plexUrl: data?.mediaInfo?.plexUrl,
+    plexUrl4k: data?.mediaInfo?.plexUrl4k,
+    iOSPlexUrl: data?.mediaInfo?.iOSPlexUrl,
+    iOSPlexUrl4k: data?.mediaInfo?.iOSPlexUrl4k,
+  });
 
   if (!data && !error) {
     return <LoadingSpinner />;
@@ -238,7 +233,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
     movieAttributes.push(
       data.genres
         .map((g) => (
-          <Link href={`/discover/movies/genre/${g.id}`} key={`genre-${g.id}`}>
+          <Link href={`/discover/movies?genre=${g.id}`} key={`genre-${g.id}`}>
             <a className="hover:underline">{g.name}</a>
           </Link>
         ))
@@ -321,10 +316,12 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
           <div className="media-status">
             <StatusBadge
               status={data.mediaInfo?.status}
+              downloadItem={data.mediaInfo?.downloadStatus}
+              title={data.title}
               inProgress={(data.mediaInfo?.downloadStatus ?? []).length > 0}
               tmdbId={data.mediaInfo?.tmdbId}
               mediaType="movie"
-              plexUrl={data.mediaInfo?.plexUrl}
+              plexUrl={plexUrl}
               serviceUrl={data.mediaInfo?.serviceUrl}
             />
             {settings.currentSettings.movie4kEnabled &&
@@ -340,13 +337,15 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
               ) && (
                 <StatusBadge
                   status={data.mediaInfo?.status4k}
+                  downloadItem={data.mediaInfo?.downloadStatus4k}
+                  title={data.title}
                   is4k
                   inProgress={
                     (data.mediaInfo?.downloadStatus4k ?? []).length > 0
                   }
                   tmdbId={data.mediaInfo?.tmdbId}
                   mediaType="movie"
-                  plexUrl={data.mediaInfo?.plexUrl4k}
+                  plexUrl={plexUrl4k}
                   serviceUrl={data.mediaInfo?.serviceUrl4k}
                 />
               )}
@@ -401,7 +400,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                   onClick={() => setShowIssueModal(true)}
                   className="ml-2 first:ml-0"
                 >
-                  <ExclamationIcon />
+                  <ExclamationTriangleIcon />
                 </Button>
               </Tooltip>
             )}
@@ -459,11 +458,25 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                 <Link href={`/movie/${data.id}/crew`}>
                   <a className="flex items-center text-gray-400 transition duration-300 hover:text-gray-100">
                     <span>{intl.formatMessage(messages.viewfullcrew)}</span>
-                    <ArrowCircleRightIcon className="ml-1.5 inline-block h-5 w-5" />
+                    <ArrowRightCircleIcon className="ml-1.5 inline-block h-5 w-5" />
                   </a>
                 </Link>
               </div>
             </>
+          )}
+          {data.keywords.length > 0 && (
+            <div className="mt-6">
+              {data.keywords.map((keyword) => (
+                <Link
+                  href={`/discover/movies?keywords=${keyword.id}`}
+                  key={`keyword-id-${keyword.id}`}
+                >
+                  <a className="mb-2 mr-2 inline-flex last:mr-0">
+                    <Tag>{keyword.name}</Tag>
+                  </a>
+                </Link>
+              ))}
+            </div>
           )}
         </div>
         <div className="media-overview-right">
@@ -500,44 +513,62 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
           )}
           <div className="media-facts">
             {(!!data.voteCount ||
-              (ratingData?.criticsRating && !!ratingData?.criticsScore) ||
-              (ratingData?.audienceRating && !!ratingData?.audienceScore)) && (
+              (ratingData?.rt?.criticsRating &&
+                !!ratingData?.rt?.criticsScore) ||
+              (ratingData?.rt?.audienceRating &&
+                !!ratingData?.rt?.audienceScore) ||
+              ratingData?.imdb?.criticsScore) && (
               <div className="media-ratings">
-                {ratingData?.criticsRating && !!ratingData?.criticsScore && (
-                  <Tooltip
-                    content={intl.formatMessage(messages.rtcriticsscore)}
-                  >
+                {ratingData?.rt?.criticsRating &&
+                  !!ratingData?.rt?.criticsScore && (
+                    <Tooltip
+                      content={intl.formatMessage(messages.rtcriticsscore)}
+                    >
+                      <a
+                        href={ratingData.rt.url}
+                        className="media-rating"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {ratingData.rt.criticsRating === 'Rotten' ? (
+                          <RTRotten className="w-6" />
+                        ) : (
+                          <RTFresh className="w-6" />
+                        )}
+                        <span>{ratingData.rt.criticsScore}%</span>
+                      </a>
+                    </Tooltip>
+                  )}
+                {ratingData?.rt?.audienceRating &&
+                  !!ratingData?.rt?.audienceScore && (
+                    <Tooltip
+                      content={intl.formatMessage(messages.rtaudiencescore)}
+                    >
+                      <a
+                        href={ratingData.rt.url}
+                        className="media-rating"
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {ratingData.rt.audienceRating === 'Spilled' ? (
+                          <RTAudRotten className="w-6" />
+                        ) : (
+                          <RTAudFresh className="w-6" />
+                        )}
+                        <span>{ratingData.rt.audienceScore}%</span>
+                      </a>
+                    </Tooltip>
+                  )}
+                {ratingData?.imdb?.criticsScore && (
+                  <Tooltip content={intl.formatMessage(messages.imdbuserscore)}>
                     <a
-                      href={ratingData.url}
+                      href={ratingData.imdb.url}
                       className="media-rating"
                       target="_blank"
                       rel="noreferrer"
                     >
-                      {ratingData.criticsRating === 'Rotten' ? (
-                        <RTRotten className="w-6" />
-                      ) : (
-                        <RTFresh className="w-6" />
-                      )}
-                      <span>{ratingData.criticsScore}%</span>
-                    </a>
-                  </Tooltip>
-                )}
-                {ratingData?.audienceRating && !!ratingData?.audienceScore && (
-                  <Tooltip
-                    content={intl.formatMessage(messages.rtaudiencescore)}
-                  >
-                    <a
-                      href={ratingData.url}
-                      className="media-rating"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {ratingData.audienceRating === 'Spilled' ? (
-                        <RTAudRotten className="w-6" />
-                      ) : (
-                        <RTAudFresh className="w-6" />
-                      )}
-                      <span>{ratingData.audienceScore}%</span>
+                      <ImdbLogo className="mr-1 w-6" />
+                      <span>{ratingData.imdb.criticsScore}</span>
                     </a>
                   </Tooltip>
                 )}
@@ -618,6 +649,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
+                          timeZone: 'UTC',
                         })}
                       </span>
                     </span>
@@ -637,6 +669,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                       year: 'numeric',
                       month: 'long',
                       day: 'numeric',
+                      timeZone: 'UTC',
                     })}
                   </span>
                 </div>
@@ -784,7 +817,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
                 tmdbId={data.id}
                 tvdbId={data.externalIds.tvdbId}
                 imdbId={data.externalIds.imdbId}
-                rtUrl={ratingData?.url}
+                rtUrl={ratingData?.rt?.url}
                 plexUrl={data.mediaInfo?.plexUrl ?? data.mediaInfo?.plexUrl4k}
               />
             </div>
@@ -797,7 +830,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
             <Link href="/movie/[movieId]/cast" as={`/movie/${data.id}/cast`}>
               <a className="slider-title">
                 <span>{intl.formatMessage(messages.cast)}</span>
-                <ArrowCircleRightIcon />
+                <ArrowRightCircleIcon />
               </a>
             </Link>
           </div>
@@ -831,7 +864,7 @@ const MovieDetails = ({ movie }: MovieDetailsProps) => {
         linkUrl={`/movie/${data.id}/similar`}
         hideWhenEmpty
       />
-      <div className="pb-8" />
+      <div className="extra-bottom-space relative" />
     </div>
   );
 };

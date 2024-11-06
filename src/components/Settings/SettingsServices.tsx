@@ -10,7 +10,7 @@ import RadarrModal from '@app/components/Settings/RadarrModal';
 import SonarrModal from '@app/components/Settings/SonarrModal';
 import globalMessages from '@app/i18n/globalMessages';
 import { Transition } from '@headlessui/react';
-import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/solid';
+import { PencilIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/solid';
 import type { RadarrSettings, SonarrSettings } from '@server/lib/settings';
 import axios from 'axios';
 import { Fragment, useState } from 'react';
@@ -247,10 +247,10 @@ const SettingsServices = () => {
       <Transition
         as={Fragment}
         show={deleteServerModal.open}
-        enter="transition ease-in-out duration-300 transform opacity-0"
+        enter="transition-opacity ease-in-out duration-300"
         enterFrom="opacity-0"
-        enterTo="opacuty-100"
-        leave="transition ease-in-out duration-300 transform opacity-100"
+        enterTo="opacity-100"
+        leave="transition-opacity ease-in-out duration-300"
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
       >

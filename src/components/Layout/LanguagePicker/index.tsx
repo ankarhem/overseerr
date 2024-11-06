@@ -3,7 +3,7 @@ import { availableLanguages } from '@app/context/LanguageContext';
 import useClickOutside from '@app/hooks/useClickOutside';
 import useLocale from '@app/hooks/useLocale';
 import { Transition } from '@headlessui/react';
-import { TranslateIcon } from '@heroicons/react/solid';
+import { LanguageIcon } from '@heroicons/react/24/solid';
 import { useRef, useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
 
@@ -28,18 +28,18 @@ const LanguagePicker = () => {
           aria-label="Language Picker"
           onClick={() => setDropdownOpen(true)}
         >
-          <TranslateIcon className="h-6 w-6" />
+          <LanguageIcon className="h-6 w-6" />
         </button>
       </div>
       <Transition
         as="div"
         show={isDropdownOpen}
-        enter="transition ease-out duration-100 opacity-0"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
-        leave="transition ease-in duration-75 opacity-100"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
+        enter="transition ease-out duration-100"
+        enterFrom="opacity-0 scale-95"
+        enterTo="opacity-100 scale-100"
+        leave="transition ease-in duration-75"
+        leaveFrom="opacity-100 scale-100"
+        leaveTo="opacity-0 scale-95"
       >
         <div
           className="absolute right-0 mt-2 w-56 origin-top-right rounded-md shadow-lg"

@@ -1,8 +1,11 @@
 import MiniQuotaDisplay from '@app/components/Layout/UserDropdown/MiniQuotaDisplay';
 import { useUser } from '@app/hooks/useUser';
 import { Menu, Transition } from '@headlessui/react';
-import { ClockIcon, LogoutIcon } from '@heroicons/react/outline';
-import { CogIcon, UserIcon } from '@heroicons/react/solid';
+import {
+  ArrowRightOnRectangleIcon,
+  ClockIcon,
+} from '@heroicons/react/24/outline';
+import { CogIcon, UserIcon } from '@heroicons/react/24/solid';
 import axios from 'axios';
 import type { LinkProps } from 'next/link';
 import Link from 'next/link';
@@ -60,11 +63,11 @@ const UserDropdown = () => {
       <Transition
         as={Fragment}
         enter="transition ease-out duration-100"
-        enterFrom="transform opacity-0 scale-95"
-        enterTo="transform opacity-100 scale-100"
+        enterFrom="opacity-0 scale-95"
+        enterTo="opacity-100 scale-100"
         leave="transition ease-in duration-75"
-        leaveFrom="transform opacity-100 scale-100"
-        leaveTo="transform opacity-0 scale-95"
+        leaveFrom="opacity-100 scale-100"
+        leaveTo="opacity-0 scale-95"
         appear
       >
         <Menu.Items className="absolute right-0 mt-2 w-72 origin-top-right rounded-md shadow-lg">
@@ -147,7 +150,7 @@ const UserDropdown = () => {
                     }`}
                     onClick={() => logout()}
                   >
-                    <LogoutIcon className="mr-2 inline h-5 w-5" />
+                    <ArrowRightOnRectangleIcon className="mr-2 inline h-5 w-5" />
                     <span>{intl.formatMessage(messages.signout)}</span>
                   </a>
                 )}

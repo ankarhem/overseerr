@@ -1,7 +1,7 @@
 import logger from '@server/logger';
 import ServarrBase from './base';
 
-interface SonarrSeason {
+export interface SonarrSeason {
   seasonNumber: number;
   monitored: boolean;
   statistics?: {
@@ -12,6 +12,21 @@ interface SonarrSeason {
     sizeOnDisk: number;
     percentOfEpisodes: number;
   };
+}
+interface EpisodeResult {
+  seriesId: number;
+  episodeFileId: number;
+  seasonNumber: number;
+  episodeNumber: number;
+  title: string;
+  airDate: string;
+  airDateUtc: string;
+  overview: string;
+  hasFile: boolean;
+  monitored: boolean;
+  absoluteEpisodeNumber: number;
+  unverifiedSceneNumbering: boolean;
+  id: number;
 }
 
 export interface SonarrSeries {
@@ -61,6 +76,15 @@ export interface SonarrSeries {
     ignoreEpisodesWithoutFiles?: boolean;
     searchForMissingEpisodes?: boolean;
   };
+  statistics: {
+    seasonCount: number;
+    episodeFileCount: number;
+    episodeCount: number;
+    totalEpisodeCount: number;
+    sizeOnDisk: number;
+    releaseGroups: string[];
+    percentOfEpisodes: number;
+  };
 }
 
 export interface AddSeriesOptions {
@@ -82,7 +106,11 @@ export interface LanguageProfile {
   name: string;
 }
 
-class SonarrAPI extends ServarrBase<{ seriesId: number; episodeId: number }> {
+class SonarrAPI extends ServarrBase<{
+  seriesId: number;
+  episodeId: number;
+  episode: EpisodeResult;
+}> {
   constructor({ url, apiKey }: { url: string; apiKey: string }) {
     super({ url, apiKey, apiName: 'Sonarr', cacheName: 'sonarr' });
   }
@@ -94,6 +122,16 @@ class SonarrAPI extends ServarrBase<{ seriesId: number; episodeId: number }> {
       return response.data;
     } catch (e) {
       throw new Error(`[Sonarr] Failed to retrieve series: ${e.message}`);
+    }
+  }
+
+  public async getSeriesById(id: number): Promise<SonarrSeries> {
+    try {
+      const response = await this.axios.get<SonarrSeries>(`/series/${id}`);
+
+      return response.data;
+    } catch (e) {
+      throw new Error(`[Sonarr] Failed to retrieve series by ID: ${e.message}`);
     }
   }
 

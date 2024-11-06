@@ -2,7 +2,7 @@ import Button from '@app/components/Common/Button';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
 import { Menu, Transition } from '@headlessui/react';
-import { DotsVerticalIcon } from '@heroicons/react/solid';
+import { EllipsisVerticalIcon } from '@heroicons/react/24/solid';
 import { Field, Form, Formik } from 'formik';
 import { useState } from 'react';
 import { defineMessages, useIntl } from 'react-intl';
@@ -46,7 +46,10 @@ const IssueDescription = ({
                 <div>
                   <Menu.Button className="flex items-center rounded-full text-gray-400 hover:text-gray-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-gray-100">
                     <span className="sr-only">Open options</span>
-                    <DotsVerticalIcon className="h-5 w-5" aria-hidden="true" />
+                    <EllipsisVerticalIcon
+                      className="h-5 w-5"
+                      aria-hidden="true"
+                    />
                   </Menu.Button>
                 </div>
 
@@ -54,11 +57,11 @@ const IssueDescription = ({
                   show={open}
                   as="div"
                   enter="transition ease-out duration-100"
-                  enterFrom="transform opacity-0 scale-95"
-                  enterTo="transform opacity-100 scale-100"
+                  enterFrom="opacity-0 scale-95"
+                  enterTo="opacity-100 scale-100"
                   leave="transition ease-in duration-75"
-                  leaveFrom="transform opacity-100 scale-100"
-                  leaveTo="transform opacity-0 scale-95"
+                  leaveFrom="opacity-100 scale-100"
+                  leaveTo="opacity-0 scale-95"
                 >
                   <Menu.Items
                     static

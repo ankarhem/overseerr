@@ -2,8 +2,11 @@ import Button from '@app/components/Common/Button';
 import LoadingSpinner from '@app/components/Common/LoadingSpinner';
 import NotificationTypeSelector from '@app/components/NotificationTypeSelector';
 import globalMessages from '@app/i18n/globalMessages';
-import { BeakerIcon, SaveIcon } from '@heroicons/react/outline';
-import { QuestionMarkCircleIcon, RefreshIcon } from '@heroicons/react/solid';
+import { ArrowDownOnSquareIcon, BeakerIcon } from '@heroicons/react/24/outline';
+import {
+  ArrowPathIcon,
+  QuestionMarkCircleIcon,
+} from '@heroicons/react/24/solid';
 import axios from 'axios';
 import { Field, Form, Formik } from 'formik';
 import dynamic from 'next/dynamic';
@@ -36,6 +39,9 @@ const defaultPayload = {
     requestedBy_email: '{{requestedBy_email}}',
     requestedBy_username: '{{requestedBy_username}}',
     requestedBy_avatar: '{{requestedBy_avatar}}',
+    requestedBy_settings_discordId: '{{requestedBy_settings_discordId}}',
+    requestedBy_settings_telegramChatId:
+      '{{requestedBy_settings_telegramChatId}}',
   },
   '{{issue}}': {
     issue_id: '{{issue_id}}',
@@ -44,12 +50,18 @@ const defaultPayload = {
     reportedBy_email: '{{reportedBy_email}}',
     reportedBy_username: '{{reportedBy_username}}',
     reportedBy_avatar: '{{reportedBy_avatar}}',
+    reportedBy_settings_discordId: '{{reportedBy_settings_discordId}}',
+    reportedBy_settings_telegramChatId:
+      '{{reportedBy_settings_telegramChatId}}',
   },
   '{{comment}}': {
     comment_message: '{{comment_message}}',
     commentedBy_email: '{{commentedBy_email}}',
     commentedBy_username: '{{commentedBy_username}}',
     commentedBy_avatar: '{{commentedBy_avatar}}',
+    commentedBy_settings_discordId: '{{commentedBy_settings_discordId}}',
+    commentedBy_settings_telegramChatId:
+      '{{commentedBy_settings_telegramChatId}}',
   },
   '{{extra}}': [],
 };
@@ -291,7 +303,7 @@ const NotificationsWebhook = () => {
                     }}
                     className="mr-2"
                   >
-                    <RefreshIcon />
+                    <ArrowPathIcon />
                     <span>{intl.formatMessage(messages.resetPayload)}</span>
                   </Button>
                   <Link
@@ -359,7 +371,7 @@ const NotificationsWebhook = () => {
                       (values.enabled && !values.types)
                     }
                   >
-                    <SaveIcon />
+                    <ArrowDownOnSquareIcon />
                     <span>
                       {isSubmitting
                         ? intl.formatMessage(globalMessages.saving)

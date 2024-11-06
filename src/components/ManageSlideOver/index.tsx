@@ -1,14 +1,15 @@
 import Button from '@app/components/Common/Button';
 import ConfirmButton from '@app/components/Common/ConfirmButton';
 import SlideOver from '@app/components/Common/SlideOver';
+import Tooltip from '@app/components/Common/Tooltip';
 import DownloadBlock from '@app/components/DownloadBlock';
 import IssueBlock from '@app/components/IssueBlock';
 import RequestBlock from '@app/components/RequestBlock';
 import useSettings from '@app/hooks/useSettings';
 import { Permission, useUser } from '@app/hooks/useUser';
 import globalMessages from '@app/i18n/globalMessages';
-import { ServerIcon, ViewListIcon } from '@heroicons/react/outline';
-import { CheckCircleIcon, DocumentRemoveIcon } from '@heroicons/react/solid';
+import { Bars4Icon, ServerIcon } from '@heroicons/react/24/outline';
+import { CheckCircleIcon, DocumentMinusIcon } from '@heroicons/react/24/solid';
 import { IssueStatus } from '@server/constants/issue';
 import { MediaRequestStatus, MediaStatus } from '@server/constants/media';
 import type { MediaWatchDataResponse } from '@server/interfaces/api/mediaInterfaces';
@@ -144,20 +145,24 @@ const ManageSlideOver = ({
             <div className="overflow-hidden rounded-md border border-gray-700 shadow">
               <ul>
                 {data.mediaInfo?.downloadStatus?.map((status, index) => (
-                  <li
+                  <Tooltip
                     key={`dl-status-${status.externalId}-${index}`}
-                    className="border-b border-gray-700 last:border-b-0"
+                    content={status.title}
                   >
-                    <DownloadBlock downloadItem={status} />
-                  </li>
+                    <li className="border-b border-gray-700 last:border-b-0">
+                      <DownloadBlock downloadItem={status} />
+                    </li>
+                  </Tooltip>
                 ))}
                 {data.mediaInfo?.downloadStatus4k?.map((status, index) => (
-                  <li
+                  <Tooltip
                     key={`dl-status-${status.externalId}-${index}`}
-                    className="border-b border-gray-700 last:border-b-0"
+                    content={status.title}
                   >
-                    <DownloadBlock downloadItem={status} is4k />
-                  </li>
+                    <li className="border-b border-gray-700 last:border-b-0">
+                      <DownloadBlock downloadItem={status} is4k />
+                    </li>
+                  </Tooltip>
                 ))}
               </ul>
             </div>
@@ -272,11 +277,16 @@ const ManageSlideOver = ({
                                   key={`watch-user-${user.id}`}
                                 >
                                   <a className="z-0 mb-1 -mr-2 shrink-0 hover:z-50">
-                                    <img
-                                      src={user.avatar}
-                                      alt={user.displayName}
-                                      className="h-8 w-8 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
-                                    />
+                                    <Tooltip
+                                      key={`watch-user-${user.id}`}
+                                      content={user.displayName}
+                                    >
+                                      <img
+                                        src={user.avatar}
+                                        alt={user.displayName}
+                                        className="h-8 w-8 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
+                                      />
+                                    </Tooltip>
                                   </a>
                                 </Link>
                               ))}
@@ -297,7 +307,7 @@ const ManageSlideOver = ({
                             watchData?.data ? 'rounded-t-none' : ''
                           }`}
                         >
-                          <ViewListIcon />
+                          <Bars4Icon />
                           <span>
                             {intl.formatMessage(messages.opentautulli)}
                           </span>
@@ -393,11 +403,16 @@ const ManageSlideOver = ({
                                   key={`watch-user-${user.id}`}
                                 >
                                   <a className="z-0 mb-1 -mr-2 shrink-0 hover:z-50">
-                                    <img
-                                      src={user.avatar}
-                                      alt={user.displayName}
-                                      className="h-8 w-8 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
-                                    />
+                                    <Tooltip
+                                      key={`watch-user-${user.id}`}
+                                      content={user.displayName}
+                                    >
+                                      <img
+                                        src={user.avatar}
+                                        alt={user.displayName}
+                                        className="h-8 w-8 scale-100 transform-gpu rounded-full object-cover ring-1 ring-gray-500 transition duration-300 hover:scale-105"
+                                      />
+                                    </Tooltip>
                                   </a>
                                 </Link>
                               ))}
@@ -418,7 +433,7 @@ const ManageSlideOver = ({
                             watchData?.data4k ? 'rounded-t-none' : ''
                           }`}
                         >
-                          <ViewListIcon />
+                          <Bars4Icon />
                           <span>
                             {intl.formatMessage(messages.opentautulli)}
                           </span>
@@ -492,7 +507,7 @@ const ManageSlideOver = ({
                   confirmText={intl.formatMessage(globalMessages.areyousure)}
                   className="w-full"
                 >
-                  <DocumentRemoveIcon />
+                  <DocumentMinusIcon />
                   <span>
                     {intl.formatMessage(messages.manageModalClearMedia)}
                   </span>

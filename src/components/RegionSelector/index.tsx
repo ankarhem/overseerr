@@ -1,6 +1,6 @@
 import useSettings from '@app/hooks/useSettings';
 import { Listbox, Transition } from '@headlessui/react';
-import { CheckIcon, ChevronDownIcon } from '@heroicons/react/solid';
+import { CheckIcon, ChevronDownIcon } from '@heroicons/react/24/solid';
 import type { Region } from '@server/lib/settings';
 import { hasFlag } from 'country-flag-icons';
 import 'country-flag-icons/3x2/flags.css';
@@ -18,6 +18,8 @@ interface RegionSelectorProps {
   value: string;
   name: string;
   isUserSetting?: boolean;
+  disableAll?: boolean;
+  watchProviders?: boolean;
   onChange?: (fieldName: string, region: string) => void;
 }
 
@@ -25,11 +27,15 @@ const RegionSelector = ({
   name,
   value,
   isUserSetting = false,
+  disableAll = false,
+  watchProviders = false,
   onChange,
 }: RegionSelectorProps) => {
   const { currentSettings } = useSettings();
   const intl = useIntl();
-  const { data: regions } = useSWR<Region[]>('/api/v1/regions');
+  const { data: regions } = useSWR<Region[]>(
+    watchProviders ? '/api/v1/watchproviders/regions' : '/api/v1/regions'
+  );
   const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
 
   const allRegion: Region = useMemo(
@@ -71,7 +77,11 @@ const RegionSelector = ({
 
   useEffect(() => {
     if (onChange && regions) {
-      onChange(name, selectedRegion?.iso_3166_1 ?? '');
+      if (selectedRegion) {
+        onChange(name, selectedRegion.iso_3166_1);
+      } else {
+        onChange(name, '');
+      }
     }
   }, [onChange, selectedRegion, name, regions]);
 
@@ -116,7 +126,7 @@ const RegionSelector = ({
 
             <Transition
               show={open}
-              leave="transition ease-in duration-100"
+              leave="transition-opacity ease-in duration-100"
               leaveFrom="opacity-100"
               leaveTo="opacity-0"
               className="absolute mt-1 w-full rounded-md bg-gray-800 shadow-lg"
@@ -166,32 +176,34 @@ const RegionSelector = ({
                     )}
                   </Listbox.Option>
                 )}
-                <Listbox.Option value={isUserSetting ? allRegion : null}>
-                  {({ selected, active }) => (
-                    <div
-                      className={`${
-                        active ? 'bg-indigo-600 text-white' : 'text-gray-300'
-                      } relative cursor-default select-none py-2 pl-8 pr-4`}
-                    >
-                      <span
+                {!disableAll && (
+                  <Listbox.Option value={isUserSetting ? allRegion : null}>
+                    {({ selected, active }) => (
+                      <div
                         className={`${
-                          selected ? 'font-semibold' : 'font-normal'
-                        } block truncate pl-8`}
+                          active ? 'bg-indigo-600 text-white' : 'text-gray-300'
+                        } relative cursor-default select-none py-2 pl-8 pr-4`}
                       >
-                        {intl.formatMessage(messages.regionDefault)}
-                      </span>
-                      {selected && (
                         <span
                           className={`${
-                            active ? 'text-white' : 'text-indigo-600'
-                          } absolute inset-y-0 left-0 flex items-center pl-1.5`}
+                            selected ? 'font-semibold' : 'font-normal'
+                          } block truncate pl-8`}
                         >
-                          <CheckIcon className="h-5 w-5" />
+                          {intl.formatMessage(messages.regionDefault)}
                         </span>
-                      )}
-                    </div>
-                  )}
-                </Listbox.Option>
+                        {selected && (
+                          <span
+                            className={`${
+                              active ? 'text-white' : 'text-indigo-600'
+                            } absolute inset-y-0 left-0 flex items-center pl-1.5`}
+                          >
+                            <CheckIcon className="h-5 w-5" />
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </Listbox.Option>
+                )}
                 {sortedRegions?.map((region) => (
                   <Listbox.Option key={region.iso_3166_1} value={region}>
                     {({ selected, active }) => (

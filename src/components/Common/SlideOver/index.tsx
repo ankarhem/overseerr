@@ -1,7 +1,7 @@
 /* eslint-disable jsx-a11y/click-events-have-key-events */
 import { useLockBodyScroll } from '@app/hooks/useLockBodyScroll';
 import { Transition } from '@headlessui/react';
-import { XIcon } from '@heroicons/react/outline';
+import { XMarkIcon } from '@heroicons/react/24/outline';
 import { Fragment, useEffect, useRef, useState } from 'react';
 import ReactDOM from 'react-dom';
 
@@ -37,10 +37,10 @@ const SlideOver = ({
       as={Fragment}
       show={show}
       appear
-      enter="opacity-0 transition ease-in-out duration-300"
+      enter="transition-opacity ease-in-out duration-300"
       enterFrom="opacity-0"
       enterTo="opacity-100"
-      leave="opacity-100 transition ease-in-out duration-300"
+      leave="transition-opacity ease-in-out duration-300"
       leaveFrom="opacity-100"
       leaveTo="opacity-0"
     >
@@ -58,20 +58,20 @@ const SlideOver = ({
           <section className="absolute inset-y-0 right-0 flex max-w-full">
             <Transition.Child
               appear
-              enter="transform transition ease-in-out duration-500 sm:duration-700"
+              enter="transition-transform ease-in-out duration-500 sm:duration-700"
               enterFrom="translate-x-full"
               enterTo="translate-x-0"
-              leave="transform transition ease-in-out duration-500 sm:duration-700"
+              leave="transition-transform ease-in-out duration-500 sm:duration-700"
               leaveFrom="translate-x-0"
               leaveTo="translate-x-full"
             >
               {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
               <div
-                className="slideover h-full w-screen max-w-md p-2 sm:p-4"
+                className="slideover relative h-full w-screen max-w-md p-2 sm:p-3"
                 ref={slideoverRef}
                 onClick={(e) => e.stopPropagation()}
               >
-                <div className="hide-scrollbar flex h-full flex-col overflow-y-scroll rounded-lg bg-gray-800 bg-opacity-80 shadow-xl ring-1 ring-gray-700 backdrop-blur">
+                <div className="flex h-full flex-col rounded-lg bg-gray-800 bg-opacity-80 shadow-xl ring-1 ring-gray-700 backdrop-blur">
                   <header className="space-y-1 border-b border-gray-700 py-4 px-4">
                     <div className="flex items-center justify-between space-x-3">
                       <h2 className="text-overseerr text-2xl font-bold leading-7">
@@ -83,7 +83,7 @@ const SlideOver = ({
                           className="text-gray-200 transition duration-150 ease-in-out hover:text-white"
                           onClick={() => onClose()}
                         >
-                          <XIcon className="h-6 w-6" />
+                          <XMarkIcon className="h-6 w-6" />
                         </button>
                       </div>
                     </div>
@@ -95,8 +95,10 @@ const SlideOver = ({
                       </div>
                     )}
                   </header>
-                  <div className="relative flex-1 px-4 py-6 text-white">
-                    {children}
+                  <div className="hide-scrollbar flex flex-1 flex-col overflow-y-auto">
+                    <div className="flex-1 px-4 py-6 text-white">
+                      {children}
+                    </div>
                   </div>
                 </div>
               </div>
